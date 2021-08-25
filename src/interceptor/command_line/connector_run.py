@@ -6,16 +6,16 @@ Created     : 03/31/2020
 Last Changed: 04/20/2020
 Description : ZMQ Connector launched with MPI. For example:
 
-To run on 10 cores at host 'bl121proc00', receiving from port 8121, running 
+To run on 10 cores at host 'bl121proc00', receiving from port 8121, running
 only spotfinding, text output to stdout, not forwarding to a GUI:
 
-mpirun --map-by core --bind-to core -np 10 python connector --host 
+mpirun --map-by core --bind-to core -np 10 python connector --host
 bl121proc00 --port 8121 --last_stage spotfinding --verbose
 
 The same run as above, with forwarding to a GUI on port 9998:
 
-mpirun --map-by core --bind-to core -np 10 python connector --host 
-bl121proc00 --port 8121 --last_stage spotfinding --verbose 
+mpirun --map-by core --bind-to core -np 10 python connector --host
+bl121proc00 --port 8121 --last_stage spotfinding --verbose
 --uihost=localhost --uiport=9998 --uistype='push'
 """
 
@@ -66,6 +66,33 @@ def parse_command_args():
         help='List of cpus to which the processes will bind (e.g. "1-10,20-54");'
              ' will supersede the --n_proc value even from preset',
     )
+    parser.add_argument(
+        "-r", "--rank",
+        type=int,
+        default=-999,
+        help='Approximates MPI rank, where 0 launches the Collector, while any other '
+             'number would launch a worker with that number as part of ID'
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        nargs="*",
+        default=None,
+        help='List of hosts on which to launch Interceptor workers',
+    )
+    parser.add_argument(
+        "--hostfile",
+        type=str,
+        default=None,
+        help='Filepath for a list of hosts on which to launch Interceptor workers',
+    )
+    parser.add_argument(
+        "--collector_host",
+        type=str,
+        default=None,
+        help='The URL (host:port) for the Collector module for workers to connect to',
+    )
+
     parser.add_argument("--test", action="store_true", default=False)
     parser.add_argument(
         "--verbose", action="store_true", default=False, help="Print output to stdout"
@@ -85,7 +112,6 @@ def parse_command_args():
         "--beamline", type=str, default='DEFAULT', help="Beamline of the experiment",
     )
     parser.add_argument(
-        "-r",
         "--record",
         type=str,
         default=None,
@@ -120,28 +146,33 @@ def parse_command_args():
 
 
 def entry_point():
-    try:
-        from mpi4py import MPI
-    except ImportError as ie:
-        comm_world = None
-        print("DEBUG: MPI NOT LOADED! {}".format(ie))
-    else:
-        comm_world = MPI.COMM_WORLD
-    if comm_world is not None:
-        args, _ = parse_command_args().parse_known_args()
-        rank = comm_world.Get_rank()
-        localhost = MPI.Get_processor_name().split('.')[0]
-        if rank == 0:
+    args, _ = parse_command_args().parse_known_args()
+    localhost = 'localhost'
+    if args.rank == -999:
+        try:
+            from mpi4py import MPI
+        except ImportError as ie:
+            print("DEBUG: MPI NOT LOADED! {}".format(ie))
+        else:
+            comm_world = MPI.COMM_WORLD
+            rank = comm_world.Get_rank()
+            localhost = MPI.Get_processor_name().split('.')[0]
+            if rank == 0:
                 script = Collector(comm=comm_world, args=args, localhost=localhost)
-        elif rank == 1:
-            if args.broker:
-                script = Connector(comm=comm_world, args=args, localhost=localhost)
+            elif rank == 1:
+                if args.broker:
+                    script = Connector(comm=comm_world, args=args, localhost=localhost)
+                else:
+                    script = Reader(comm=comm_world, args=args, localhost=localhost)
             else:
                 script = Reader(comm=comm_world, args=args, localhost=localhost)
+            comm_world.barrier()
+            script.run()
+    else:
+        if args.rank == 0:
+            script = Collector(args=args, localhost=localhost)
         else:
-            script = Reader(comm=comm_world, args=args, localhost=localhost)
-        comm_world.barrier()
-
+            script = Reader(args=args, localhost=localhost)
         script.run()
 
 

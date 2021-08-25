@@ -43,8 +43,8 @@ class ZMQProcessBase:
             self.rank = comm.Get_rank()  # each process in MPI has a unique id
             self.size = comm.Get_size()  # number of processes running in this job
         else:
-            self.rank = 0
-            self.size = 0
+            self.rank = args.rank
+            self.size = args.n_proc
 
         self.stop = False
         self.timeout_start = None
@@ -101,7 +101,9 @@ class ZMQProcessBase:
         return socket
 
     def broadcast(self, data):
-        self.comm.bcast(data, root=0)
+        if self.comm:
+            self.comm.bcast(data, root=0)
+
 
 class Connector(ZMQProcessBase):
     """ A ZMQ Broker class, with a zmq.PULL backend (facing a zmq.PUSH Splitter) and
@@ -333,16 +335,23 @@ class Reader(ZMQProcessBase):
                 wid=self.name,
                 host=dhost,
                 port=dport,
+                verbose=self.args.verbose,
             )
             proc_url = "tcp://{}:{}".format(dhost, dport)
 
             if init_r_socket:
+                # if collector_host option exists, use it
+                if self.args.collector_host:
+                    chost = self.args.collector_host
+                else:
+                    chost = self.localhost
                 cport = "7{}".format(str(self.cfg.getstr('port'))[1:])
                 self.r_socket = self.make_socket(
                     socket_type="push",
                     wid="{}_2C".format(self.name),
-                    host=self.localhost,
+                    host=chost,
                     port=cport,
+                    verbose=self.args.verbose,
                 )
         except Exception as e:
             print("SOCKET ERROR: {}".format(e))
@@ -495,7 +504,7 @@ class Collector(ZMQProcessBase):
 
     def send_check_in_info(self, hung_readers, down_readers):
         down_readers.extend(hung_readers)
-        down_dict = {"down_readers" : down_readers}
+        down_dict = {"down_readers": down_readers}
         self.broadcast(data=down_dict)
 
     def understand_info(self, info):
@@ -508,7 +517,7 @@ class Collector(ZMQProcessBase):
                 'start_time': time.time(),
             }
             msg = "{} CONNECTED to {}".format(reader_name, info["proc_url"])
-            if len(self.readers) == self.comm.Get_size() - 1:
+            if len(self.readers) == self.size - 1:
                 msg = '{} Readers connected ({})'.format(
                     len(self.readers),
                     time.strftime('%b %d %Y %I:%M:%S %p'),
