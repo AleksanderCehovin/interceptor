@@ -1,6 +1,8 @@
 from __future__ import absolute_import, division, print_function
 
 import setuptools
+from setuptools import setup, find_packages
+
 
 setuptools.setup(
     name="intxr",
@@ -12,11 +14,13 @@ setuptools.setup(
     version="0.22.5",
     url="https://github.com/ssrl-px/interceptor",
     license="BSD",
-    install_requires=[],
+    #install_requires=[], ORIGINAL LINE
+    install_requires=['zmq','numpy','wxpython','matplotlib'],
     package_dir={"": "src"},
-    packages=["interceptor"],
+    #packages=["interceptor"], ORIGINAL LINE
+    packages=find_packages(where='src'),
     package_data={
-      'gui':['*.png'],
+      "":['*.png','*.cfg'],
     },
     entry_points={
         "console_scripts": [
@@ -26,10 +30,6 @@ setuptools.setup(
         ],
         "gui_scripts": [
             "intxr.gui = interceptor.command_line.ui_run:entry_point",
-        ],
-        "dxtbx.format": [
-            "FormatEigerStreamSSRL:FormatEigerStream = "
-            "interceptor.format.FormatEigerStreamSSRL:FormatEigerStreamSSRL",
         ],
         "libtbx.dispatcher.script": [
             "intxr.gui = intxr.gui",

@@ -10,7 +10,7 @@ Description : Interceptor module
 import wx
 from interceptor.gui.tracker import TrackerWindow
 from interceptor import __version__ as intxr_version
-from iota import iota_version
+#from iota import iota_version
 
 
 class MainApp(wx.App):
@@ -37,7 +37,7 @@ def entry_point():
     print("~~~ Interceptor ~~~")
     print("Versions: ")
     print("  Interceptor : ", format(intxr_version))
-    print("  IOTA        : ", format(iota_version))
+    #print("  IOTA        : ", format(iota_version))
 
     print("Python Package Versions:")
     print("  Python      : ", platform.python_version())

@@ -14,7 +14,8 @@ from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import SpanSelector
 
-from iota.components.gui import controls as ct
+#from iota.components.gui import controls as ct
+from interceptor.gui import controls as ct
 from interceptor.gui import receiver as rcv, find_icon
 from interceptor import packagefinder
 
