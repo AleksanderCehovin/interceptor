@@ -74,7 +74,7 @@ class Processor:
 
     def setup_filenames(self, tag):
         # before processing, set output paths according to the templates
-
+        pass
 
     def debug_start(self, tag):
         pass
