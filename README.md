@@ -19,7 +19,7 @@ It would be interesting to
 aleksander.cehovin@maxiv.lu.se
 
 
-# Installing the decoupled GUI
+# Installing the decoupled GUI (branch: decouple)
 
 Preliminary notes on simplified install of decoupled GUI
 
@@ -42,6 +42,17 @@ Preliminary notes on simplified install of decoupled GUI
 
 Here we assume the current directory is the root folder above the interceptor checkout one.
 
+# Installing the decouple Core (branch: decouple_no_gui) 
+
+- Install miniconda with python 3.
+- Create a conda environment, "interceptor_core", for the install
+> conda create --name interceptor_core python=3.8
+- Activate the clean environment
+> conda activate interceptor_core
+- The Core package requires mpi4py which fails to install as a pip package. Install this with conda
+> conda install mpi4py
+- With mpi support in place we can proceed to install the package with pip. All other dependencies are handled in this step.
+> python -m pip install ./interceptor
 
 
 ## Overview

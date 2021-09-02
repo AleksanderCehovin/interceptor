@@ -15,7 +15,7 @@ setuptools.setup(
     url="https://github.com/ssrl-px/interceptor",
     license="BSD",
     #install_requires=[], ORIGINAL LINE
-    install_requires=['zmq','numpy','wxpython','matplotlib'],
+    install_requires=['zmq','numpy','procrunner','mpi4py'],
     package_dir={"": "src"},
     #packages=["interceptor"], ORIGINAL LINE
     packages=find_packages(where='src'),
@@ -28,11 +28,7 @@ setuptools.setup(
             "intxr.connect_mpi = "
             "interceptor.command_line.connector_run_mpi:entry_point",
         ],
-        "gui_scripts": [
-            "intxr.gui = interceptor.command_line.ui_run:entry_point",
-        ],
         "libtbx.dispatcher.script": [
-            "intxr.gui = intxr.gui",
             "intxr.connect = intxr.connect",
             "intxr.connect_mpi = intxr.connect_mpi",
         ],
