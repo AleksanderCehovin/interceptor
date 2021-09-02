@@ -30,11 +30,16 @@ Preliminary notes on simplified install of decoupled GUI
 > conda activate interceptor_gui
 - To speed-up the installation install the following packages with conda:
 > conda install ipython
+
 > conda install wxpython
+
 > conda install matplotlib
-I believe these can be installed with pip too, but downloading conda binaries is faster.
+
+- I believe these can be installed with pip too, but downloading conda binaries is faster.
 - Finish by installing the decoupled interceptor GUI in the environment with
+
 > python -m pip install ./interceptor
+
 Here we assume the current directory is the root folder above the interceptor checkout one.
 
 
