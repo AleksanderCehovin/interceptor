@@ -19,6 +19,26 @@ It would be interesting to
 aleksander.cehovin@maxiv.lu.se
 
 
+# Installing the decoupled GUI
+
+Preliminary notes on simplified install of decoupled GUI
+
+- Install miniconda with python 3.
+- Create a conda environment, "interceptor_gui", for the install
+> conda create --name interceptor_gui python=3.8
+- Activate the clean environment
+> conda activate interceptor_gui
+- To speed-up the installation install the following packages with conda:
+> conda install ipython
+> conda install wxpython
+> conda install matplotlib
+I believe these can be installed with pip too, but downloading conda binaries is faster.
+- Finish by installing the decoupled interceptor GUI in the environment with
+> python -m pip install ./interceptor
+Here we assume the current directory is the root folder above the interceptor checkout one.
+
+
+
 ## Overview
 
 The Interceptor is a suite of programs used to provide real-time analysis of x-ray diffraction data as it’s collected at a beamline facility. Originally intended to support serial crystallography experiment, the Interceptor is now seen as applicable to a growing variety of use cases.
