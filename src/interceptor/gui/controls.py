@@ -156,7 +156,7 @@ class SpinCtrl(CtrlBase):
 
         ctr_box.Add(self.txt, flag=wx.ALIGN_CENTER_VERTICAL)
         ctr_box.Add(
-            self.ctr, flag=wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT | wx.EXPAND
+            self.ctr, flag= wx.ALIGN_RIGHT | wx.EXPAND
         )
 
         self.SetSizer(ctr_box)
