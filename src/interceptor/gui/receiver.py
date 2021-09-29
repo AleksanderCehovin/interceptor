@@ -51,6 +51,7 @@ class Receiver(Thread):
                     "frame_idx": frame_idx,
                     "n_spots": results[0],
                     "hres": results[3],
+                    "quality": results[2],
                 }
                 # mark frame if indexed
                 sg = results[6]
