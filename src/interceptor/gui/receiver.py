@@ -14,6 +14,10 @@ import numpy as np
 import wx
 
 
+MONITOR_TOPIC_TOKEN = "gui"
+# TODO: Use the config files to switch between ZMQ patterns
+USE_PULL_PUSH = False
+
 class Receiver(Thread):
     def __init__(self, parent):
         Thread.__init__(self)
@@ -27,9 +31,15 @@ class Receiver(Thread):
         context = zmq.Context()
         url = "tcp://{}:{}".format(host, port)
         print("*** INTERCEPTOR CONNECTED TO {}".format(url))
-        self.collector = context.socket(zmq.PULL)
-        self.collector.connect(url)
-        self.collector.bind("tcp://*:{}".format(port))
+        if USE_PULL_PUSH:
+            self.collector = context.socket(zmq.PULL)
+            self.collector.bind("tcp://*:{}".format(port))
+        else:
+            self.collector = context.socket(zmq.SUB)
+            self.collector.connect(url)
+            topic_token = MONITOR_TOPIC_TOKEN
+            self.collector.setsockopt(zmq.SUBSCRIBE,topic_token.encode('utf-8'))
+
 
     def run(self):
         self.read_data()
@@ -38,6 +48,8 @@ class Receiver(Thread):
         while self.stop is False:
             try:
                 data_string = self.collector.recv_string(flags=zmq.NOBLOCK)
+                if not USE_PULL_PUSH:
+                    data_string = data_string[(len(MONITOR_TOPIC_TOKEN)+1):]
             except Exception as exp:
                 time.sleep(1)
             else:
