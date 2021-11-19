@@ -723,16 +723,17 @@ class TrackerWindow(wx.Frame):
         # URL textboxes
         txt_url = wx.StaticText(self.toolbar, label="Connect to tcp://")
         ctr_host = wx.TextCtrl(
-            self.toolbar, id=wx.ID_ANY, size=(200, -1), value="localhost"
+            self.toolbar, id=wx.ID_ANY, size=(200, -1), value="222.22.2.2"
         )
         txt_div = wx.StaticText(self.toolbar, label=" : ")
         ctr_port = wx.SpinCtrl(
-            self.toolbar, id=wx.ID_ANY, size=(80, -1), max=9999, min=4001, value="8121"
+            self.toolbar, id=wx.ID_ANY, size=(80, -1), max=99999, min=4000, value="4433"
         )
         self.toolbar.AddControl(txt_url)
         self.tb_ctrl_host = self.toolbar.AddControl(control=ctr_host)
         self.toolbar.AddControl(txt_div)
         self.tb_ctrl_port = self.toolbar.AddControl(control=ctr_port)
+
 
         # Connect toggle
         sock_off_bmp = find_icon("network", size=32)
@@ -785,6 +786,7 @@ class TrackerWindow(wx.Frame):
         port = uiconfig['gui']['uiport']
         self.tb_ctrl_host.GetControl().SetValue(host)
         self.tb_ctrl_port.GetControl().SetValue(port)
+
 
     def onMinBragg(self, e):
         self.tracker_panel.chart.draw_bragg_line()
