@@ -9,6 +9,8 @@ Description : Interceptor tracking module (GUI elements)
 
 import numpy as np
 import wx
+import copy
+import gc
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -27,6 +29,7 @@ icon_cache = {}
 itx_EVT_ZOOM = wx.NewEventType()
 EVT_ZOOM = wx.PyEventBinder(itx_EVT_ZOOM, 1)
 
+RESIZE_WINDOW = 30000
 
 class EvtChartZoom(wx.PyCommandEvent):
     """ Send event when any zoom event happens  """
@@ -206,6 +209,7 @@ class TrackChart(wx.Panel):
         self.main_fig_sizer = wx.StaticBoxSizer(self.main_box, wx.VERTICAL)
         self.SetSizer(self.main_fig_sizer)
 
+        self.resize_counter = 0 # ALEK
         self.track_figure = Figure()
         self.track_axes = {}
         self.track_axes['spots'] = self.track_figure.add_subplot(311)
@@ -403,6 +407,9 @@ class TrackChart(wx.Panel):
         except AttributeError:
             pass
 
+    def get_chart_data(self):
+        return  copy.deepcopy(list(zip(self.xdata, self.ydata, self.idata, self.rdata, self.qdata)))        
+
     def draw_plot(
         self, new_data=None, new_res=None, new_x=None, new_y=None, new_i=None
     ):
@@ -451,6 +458,54 @@ class TrackChart(wx.Panel):
 
         nref_xy = list(zip(nref_x, nref_y))
 
+        """
+        if self.xdata.shape[0] > RESIZE_WINDOW:
+            self.resize_counter += 1
+            def re_bin(array):
+                N=array.shape[0]
+                M = 0
+                if self.resize_counter == 3:
+                    M = RESIZE_WINDOW//(4)
+                if (N-M) % 2 == 1:
+                    N = N -1
+                return np.mean(array[M:N].reshape(-1,2),1)
+            self.xdata = re_bin(self.xdata)
+            self.ydata = re_bin(self.ydata)
+            self.rdata = re_bin(self.rdata)
+            self.qdata = re_bin(self.qdata)
+            self.idata = re_bin(self.idata)            
+            nref_x = re_bin(nref_x)            
+            nref_y = re_bin(nref_y)            
+            nref_i = re_bin(nref_i)
+            nref_xy = list(zip(nref_x, nref_y))            
+            if self.resize_counter == 3:
+                self.resize_counter = 2            
+        """
+        if self.xdata.shape[0] > RESIZE_WINDOW:
+            self.resize_counter += 1
+            self.xdata = copy.deepcopy(self.xdata[5000:])
+            self.ydata = copy.deepcopy(self.ydata[5000:])
+            self.rdata = copy.deepcopy(self.rdata[5000:])
+            self.qdata = copy.deepcopy(self.qdata[5000:])
+            self.idata = copy.deepcopy(self.idata[5000:])            
+            nref_x = copy.deepcopy(nref_x[5000:])            
+            nref_y = copy.deepcopy(nref_y[5000:])            
+            nref_i = copy.deepcopy(nref_i[5000:])
+            nref_xy = list(zip(nref_x, nref_y))            
+            gc.collect()
+
+
+        #DEBUG
+        """
+        print("self.resize_counter {}".format(self.resize_counter))
+        print("self.xdata {}".format(self.xdata.shape))
+        print("self.ydata {}".format(self.ydata.shape))        
+        print("self.rdata {}".format(self.rdata.shape))                
+        print("self.qdata {}".format(self.qdata.shape))                        
+        print("self.idata {}".format(self.idata.shape))                                
+        print("nref_xy {} {}".format(len(nref_xy),len(nref_xy[0])))                                
+        """
+
         # identify plotted data boundaries
         if nref_x != [] and nref_y != []:
             if self.plot_zoom:
@@ -466,7 +521,7 @@ class TrackChart(wx.Panel):
                     if self.x_min <= 0:
                         self.x_min = 0
             else:
-                self.x_min = 0
+                self.x_min = np.min(nref_x)
                 self.x_max = np.max(nref_x) + 1
 
             if min_bragg > np.max(nref_y):
@@ -480,6 +535,7 @@ class TrackChart(wx.Panel):
             self.track_axes['quality'].set_ylim(0,110)
             self.track_axes['resolution'].set_xlim(self.x_min,self.x_max)
             self.track_axes['resolution'].set_ylim(0,6)
+            
         else:
             self.x_min = -1
             self.x_max = 1
@@ -492,18 +548,20 @@ class TrackChart(wx.Panel):
         rej = [
             i for i in nref_xy if (self.x_min < i[0] < self.x_max and i[1] <= min_bragg)
         ]
+        
 
         # exit if there's nothing to plot
         if not acc and not rej:
             return
-
+        
         # split acc/rej lists into x and y lists
         acc_x = [int(i[0]) for i in acc]
         acc_y = [int(i[1]) for i in acc]
         rej_x = [int(i[0]) for i in rej]
         rej_y = [int(i[1]) for i in rej]
-
+        
         # update plot data
+        
         if acc_x:
             self.acc_plot['spots'].set_xdata(acc_x)
             self.acc_plot['spots'].set_ydata(acc_y)
@@ -529,6 +587,13 @@ class TrackChart(wx.Panel):
         count = "{}".format(len(acc))
         self.main_window.tracker_panel.count_txt.SetLabel(count)
         self.main_window.tracker_panel.info_sizer.Layout()
+
+        # hit rate count
+        if len(rej) == 0:
+            count_rate = "{:.1f}".format(100)
+        else:
+            count_rate = "{:.1f}".format(100*len(acc)/(1.0*(len(acc)+len(rej))))        
+        self.main_window.tracker_panel.count_rate_txt.SetLabel(count_rate)
 
         # indexed count
         idx_count = "{}".format(len(nref_i[~np.isnan(nref_i)]))
@@ -562,6 +627,7 @@ class TrackChart(wx.Panel):
 
         # Redraw canvas
         self._update_canvas(self.track_canvas)
+        
 
     def _update_canvas(self, canvas, draw_idle=True):
         """ Update a canvas (passed as arg)
@@ -596,7 +662,7 @@ class TrackerPanel(wx.Panel):
 
         # Status box
         self.info_panel = wx.Panel(self)
-        self.info_sizer = wx.FlexGridSizer(1, 5, 0, 5)
+        self.info_sizer = wx.FlexGridSizer(1, 6, 0, 6)
         self.info_sizer.AddGrowableCol(4)
         self.info_panel.SetSizer(self.info_sizer)
 
@@ -605,6 +671,13 @@ class TrackerPanel(wx.Panel):
         self.count_txt = wx.StaticText(self.info_panel, label="")
         self.count_box_sizer.Add(
             self.count_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10
+        )
+
+        self.count_box_rate = wx.StaticBox(self.info_panel, label="Hit Rate [%]")
+        self.rate_count_box_sizer = wx.StaticBoxSizer(self.count_box_rate, wx.HORIZONTAL)
+        self.count_rate_txt = wx.StaticText(self.info_panel, label="")
+        self.rate_count_box_sizer.Add(
+            self.count_rate_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10
         )
 
         self.idx_count_box = wx.StaticBox(self.info_panel, label="Indexed")
@@ -631,6 +704,7 @@ class TrackerPanel(wx.Panel):
 
         font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.count_txt.SetFont(font)
+        self.count_rate_txt.SetFont(font)
         self.idx_count_txt.SetFont(font)
         self.res_txt.SetFont(font)
         font = wx.Font(16, wx.DEFAULT, wx.NORMAL, wx.BOLD)
@@ -638,6 +712,7 @@ class TrackerPanel(wx.Panel):
         self.uc_txt.SetFont(font)
 
         self.info_sizer.Add(self.count_box_sizer, flag=wx.EXPAND)
+        self.info_sizer.Add(self.rate_count_box_sizer, flag=wx.EXPAND)        
         self.info_sizer.Add(self.idx_count_box_sizer, flag=wx.EXPAND)
         self.info_sizer.Add(self.res_box_sizer, flag=wx.EXPAND)
         self.info_sizer.Add(self.pg_box_sizer, flag=wx.EXPAND)
@@ -675,17 +750,25 @@ class TrackerPanel(wx.Panel):
         self.main_sizer.AddGrowableRow(1)
         self.SetSizer(self.main_sizer)
 
+    def save_chart_data(self):
+        self.all_data = self.chart.get_chart_data()
+        gc.collect()
 
     def update_plot(self, reset=False):
         if reset:
             self.chart.reset_chart()
             self.chart.draw_plot(new_data=self.all_data)
+        print("update_plot all_data {}".format(len(self.all_data)))
         self.chart.draw_plot(new_data=self.new_data)
         self.all_data.extend(self.new_data)
         self.new_data = []
 
     def update_data(self, new_data):
-        new_data = [i for i in new_data if i not in self.all_data]
+        if len(self.all_data) > RESIZE_WINDOW:
+            self.save_chart_data()
+        #print("new_data before {}".format(new_data))    
+        #new_data = [i for i in new_data if i not in self.all_data]
+        #print("new_data after {}".format(new_data))
         self.new_data.extend(new_data)
 
 
@@ -693,10 +776,11 @@ class TrackerWindow(wx.Frame):
     def __init__(self, parent, id, title):
         wx.Frame.__init__(self, parent, id, title, size=(1500, 600))
         self.parent = parent
+        self.onCollectorCounter = 0
 
         # initialize dictionary of tracker panels
         self.track_panels = {}
-        self.all_info = []
+        #MEMORY LEAK self.all_info = []
 
         # Status bar
         self.sb = TrackStatusBar(self)
@@ -831,6 +915,10 @@ class TrackerWindow(wx.Frame):
                 run_no = max(extant_runs) + 1
 
         panel_title = "Run {}".format(run_no)
+        try:
+            self.tracker_panel.save_chart_data()
+        except:
+            pass
         self.tracker_panel = TrackerPanel(
             self.track_nb, main_window=self, run_number=run_no
         )
@@ -874,7 +962,7 @@ class TrackerWindow(wx.Frame):
         """ Occurs on every wx.PostEvent instance; updates lists of images with
     spotfinding results """
         info_list = e.GetValue()
-        self.all_info.extend(info_list)
+        # MEMORY LEAK self.all_info.extend(info_list)
         new_data_dict = {}
         if info_list:
             for info in info_list:

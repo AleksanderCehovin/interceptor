@@ -12,7 +12,7 @@ from threading import Thread
 import zmq
 import numpy as np
 import wx
-
+import copy
 
 MONITOR_TOPIC_TOKEN = "gui"
 # TODO: Use the config files to switch between ZMQ patterns
@@ -83,9 +83,15 @@ class Receiver(Thread):
             # doing it this way because self.all_info is being appended at up to
             # 100Hz, or faster. Thus, setting a hard end so that no information is
             # plotted twice or missed
-            info = self.all_info[start:end]
+            info = copy.deepcopy(self.all_info[start:end])
             self.send_to_gui(info=info)
             self.bookmark = end
+
+            if end > 5000:
+                #Release memory
+                print("Release memory")
+                self.all_info = []
+                self.bookmark = 0
 
     def send_to_gui(self, info):
         evt = SpotFinderOneDone(tp_EVT_SPFDONE, -1, info=info)
