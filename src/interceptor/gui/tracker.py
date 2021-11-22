@@ -345,8 +345,8 @@ class TrackChart(wx.Panel):
         clear_subplots(self.track_axes['spots'])
         clear_subplots(self.track_axes['quality'])
         clear_subplots(self.track_axes['resolution'])
-        set_subplot_labels(self.track_axes['spots'],None,"Nb. of Spots")
-        set_subplot_labels(self.track_axes['quality'],None,"Dozor Quality")
+        set_subplot_labels(self.track_axes['spots'],None,"Dozor Quality")
+        set_subplot_labels(self.track_axes['quality'],None,"Nb. of Spots")
         set_subplot_labels(self.track_axes['resolution'],"Frame Number","Resolution [Å]")        
 
         self.xdata = np.array([]).astype(np.double)
@@ -429,7 +429,7 @@ class TrackChart(wx.Panel):
 
         # append new data (if available) to data lists
         if new_data:
-            new_x, new_y, new_i, new_res, new_quality = list(zip(*new_data))
+            new_x, new_quality, new_i, new_res, new_y = list(zip(*new_data))
         if new_x and new_y:
             new_x_arr = np.array(new_x).astype(np.double)
             nref_x = np.append(self.xdata, new_x_arr)
@@ -532,7 +532,7 @@ class TrackChart(wx.Panel):
             self.track_axes['spots'].set_xlim(self.x_min, self.x_max)
             self.track_axes['spots'].set_ylim(0, self.y_max)
             self.track_axes['quality'].set_xlim(self.x_min,self.x_max)
-            self.track_axes['quality'].set_ylim(0,110)
+            self.track_axes['quality'].set_ylim(0,1.1*self.qdata.max())
             self.track_axes['resolution'].set_xlim(self.x_min,self.x_max)
             self.track_axes['resolution'].set_ylim(0,6)
             
@@ -726,7 +726,7 @@ class TrackerPanel(wx.Panel):
         self.chart = TrackChart(self.graph_panel, main_window=self.main_window)
         self.min_bragg = ct.SpinCtrl(
             self.graph_panel,
-            label="Min. Bragg spots",
+            label="Min. Dzr Quality",
             ctrl_size=(100, -1),
             ctrl_value=10,
         )
