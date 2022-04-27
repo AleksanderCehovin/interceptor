@@ -57,6 +57,7 @@ class Receiver(Thread):
                 frame_idx = data_string.split('frame ')[1].split(' result')[0]
                 result_string = data_string.split('result ')[1].split(' mapping')[0]
                 results = result_string[1:-1].split()
+                sample_string = data_string.split('result ')[1].split(' mapping')[1]
 
                 data = {
                     "run_no": run_no,
@@ -64,6 +65,7 @@ class Receiver(Thread):
                     "n_spots": results[0],
                     "hres": results[3],
                     "quality": results[2],
+                    "sample_string": sample_string
                 }
                 # mark frame if indexed
                 sg = results[6]

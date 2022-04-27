@@ -12,6 +12,7 @@ import wx
 import copy
 import gc
 
+
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
 from matplotlib.widgets import SpanSelector
@@ -217,7 +218,7 @@ class TrackChart(wx.Panel):
         self.track_axes['resolution'] = self.track_figure.add_subplot(313)        
         set_subplot_labels(self.track_axes['spots'],None,"Found Spots")
         set_subplot_labels(self.track_axes['quality'],None,"Quality")
-        set_subplot_labels(self.track_axes['resolution'],"Frame","Resolution")
+        set_subplot_labels(self.track_axes['resolution'],"Frame","Resolution [1/Å]")
 
         self.track_figure.set_tight_layout(True)
         self.track_canvas = FigureCanvas(self, -1, self.track_figure)
@@ -347,7 +348,7 @@ class TrackChart(wx.Panel):
         clear_subplots(self.track_axes['resolution'])
         set_subplot_labels(self.track_axes['spots'],None,"Dozor Quality")
         set_subplot_labels(self.track_axes['quality'],None,"Nb. of Spots")
-        set_subplot_labels(self.track_axes['resolution'],"Frame Number","Resolution [Å]")        
+        set_subplot_labels(self.track_axes['resolution'],"Frame Number","Resolution [1/Å]")        
 
         self.xdata = np.array([]).astype(np.double)
         self.ydata = np.array([]).astype(np.double)
@@ -408,7 +409,8 @@ class TrackChart(wx.Panel):
             pass
 
     def get_chart_data(self):
-        return  copy.deepcopy(list(zip(self.xdata, self.ydata, self.idata, self.rdata, self.qdata)))        
+        #return  copy.deepcopy(list(zip(self.xdata, self.ydata, self.idata, self.rdata, self.qdata)))        
+        return  copy.deepcopy(list(zip(self.xdata, self.qdata, self.idata, self.rdata, self.ydata)))        
 
     def draw_plot(
         self, new_data=None, new_res=None, new_x=None, new_y=None, new_i=None
@@ -534,7 +536,7 @@ class TrackChart(wx.Panel):
             self.track_axes['quality'].set_xlim(self.x_min,self.x_max)
             self.track_axes['quality'].set_ylim(0,1.1*self.qdata.max())
             self.track_axes['resolution'].set_xlim(self.x_min,self.x_max)
-            self.track_axes['resolution'].set_ylim(0,6)
+            self.track_axes['resolution'].set_ylim(0,1)
             
         else:
             self.x_min = -1
@@ -568,7 +570,8 @@ class TrackChart(wx.Panel):
             self.acc_plot['quality'].set_xdata(nref_x)
             self.acc_plot['quality'].set_ydata(self.qdata)
             self.acc_plot['resolution'].set_xdata(nref_x)
-            self.acc_plot['resolution'].set_ydata(self.rdata)
+            #Add a small number in denominator to avoid potential divison by zero
+            self.acc_plot['resolution'].set_ydata( 1./(0.01+self.rdata) )
         if rej_x:
             self.rej_plot['spots'].set_xdata(rej_x)
             self.rej_plot['spots'].set_ydata(rej_y)
@@ -603,6 +606,11 @@ class TrackChart(wx.Panel):
         median_res = np.median(self.rdata)
         res_label = "{:.2f} Å".format(median_res)
         self.main_window.tracker_panel.res_txt.SetLabel(res_label)
+
+        # Test Sample Name
+        #sample_txt = "test-sample-prefix"
+        #self.main_window.tracker_panel.pg_txt.SetLabel(sample_txt)
+
 
         # Draw extended plots
         self.track_axes['spots'].draw_artist(self.acc_plot['spots'])
@@ -657,6 +665,9 @@ class TrackerPanel(wx.Panel):
         self.all_data = []
         self.new_data = []
         self.run_number = run_number
+        #Sample ID
+        self.sample_id = "None"
+
 
         self.main_sizer = wx.GridBagSizer(10, 10)
 
@@ -692,12 +703,12 @@ class TrackerPanel(wx.Panel):
         self.res_txt = wx.StaticText(self.info_panel, label="")
         self.res_box_sizer.Add(self.res_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
 
-        self.pg_box = wx.StaticBox(self.info_panel, label="Best Lattice")
+        self.pg_box = wx.StaticBox(self.info_panel, label="Sample Label")
         self.pg_box_sizer = wx.StaticBoxSizer(self.pg_box, wx.HORIZONTAL)
         self.pg_txt = wx.StaticText(self.info_panel, label="")
         self.pg_box_sizer.Add(self.pg_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
 
-        self.uc_box = wx.StaticBox(self.info_panel, label="Best Unit Cell")
+        self.uc_box = wx.StaticBox(self.info_panel, label="Run Number")
         self.uc_box_sizer = wx.StaticBoxSizer(self.uc_box, wx.HORIZONTAL)
         self.uc_txt = wx.StaticText(self.info_panel, label="")
         self.uc_box_sizer.Add(self.uc_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
@@ -750,6 +761,12 @@ class TrackerPanel(wx.Panel):
         self.main_sizer.AddGrowableRow(1)
         self.SetSizer(self.main_sizer)
 
+    #ADDITION
+    def set_sample_id(self,sample_string, run_no):
+        self.sample_id = sample_string
+        self.pg_txt.SetLabel(sample_string)
+        self.uc_txt.SetLabel(run_no)
+
     def save_chart_data(self):
         self.all_data = self.chart.get_chart_data()
         gc.collect()
@@ -777,6 +794,7 @@ class TrackerWindow(wx.Frame):
         wx.Frame.__init__(self, parent, id, title, size=(1500, 600))
         self.parent = parent
         self.onCollectorCounter = 0
+        self.tab_no = 1
 
         # initialize dictionary of tracker panels
         self.track_panels = {}
@@ -829,6 +847,18 @@ class TrackerWindow(wx.Frame):
             shortHelp="Connect to / Disconnect from beamline",
         )
 
+        #TEST
+        stop_bmp = find_icon("stop", size=32)
+        self.tb_btn_stop = self.toolbar.AddTool(
+            toolId=wx.ID_ANY,
+            label="Debug",
+            bitmap=stop_bmp,
+            kind=wx.ITEM_NORMAL,
+            shortHelp="Debug Trigger Button",
+        )
+
+
+
         # Quit button
         self.toolbar.AddStretchableSpace()
         quit_bmp = find_icon("exit", size=32)
@@ -851,6 +881,8 @@ class TrackerWindow(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.onQuit, self.tb_btn_quit)
         self.Bind(wx.EVT_TOOL, self.onConnect, self.tb_btn_conn)
         self.Bind(wx.EVT_CHOICE, self.onBLChoice, self.tb_chc_bl.GetControl())
+        #DEBUG
+        self.Bind(wx.EVT_TOOL, self.onStop, self.tb_btn_stop)        
 
         # Notebook bindings
         self.Bind(
@@ -867,7 +899,7 @@ class TrackerWindow(wx.Frame):
         ctrl = self.tb_chc_bl.GetControl()
         selstring = ctrl.GetString(ctrl.GetSelection())
         host = blconfig[selstring]['host']
-        port = uiconfig['gui']['uiport']
+        port = blconfig[selstring]['port']
         self.tb_ctrl_host.GetControl().SetValue(host)
         self.tb_ctrl_port.GetControl().SetValue(port)
 
@@ -909,16 +941,33 @@ class TrackerWindow(wx.Frame):
     def create_new_run(self, run_no=None):
         if run_no is None:
             if not self.track_panels:
-                run_no = 1
+                run_no = "1"
             else:
                 extant_runs = [int(r) for r in self.track_panels.keys()]
                 run_no = max(extant_runs) + 1
 
-        panel_title = "Run {}".format(run_no)
+        panel_title = "Tab {}".format(run_no)
         try:
             self.tracker_panel.save_chart_data()
         except:
+            print("Exception: TrackerWindow: self.tracker_panel.save_chart_data() failed")
             pass
+        self.tracker_panel = TrackerPanel(
+            self.track_nb, main_window=self, run_number=run_no
+        )
+        self.track_panels[run_no] = self.tracker_panel
+        self.track_nb.AddPage(self.tracker_panel, panel_title, select=True)
+
+        self.Bind(wx.EVT_SPINCTRL, self.onMinBragg, self.tracker_panel.min_bragg.ctr)
+        # self.Bind(EVT_ZOOM, self.onChartRange)
+
+    def reset_tabs(self):
+
+        run_no = 1
+        panel_title = "Run {}".format(run_no)
+        # initialize dictionary of tracker panels
+        self.track_panels = {}
+
         self.tracker_panel = TrackerPanel(
             self.track_nb, main_window=self, run_number=run_no
         )
@@ -967,9 +1016,11 @@ class TrackerWindow(wx.Frame):
         if info_list:
             for info in info_list:
                 run_no = info["run_no"]
+                sample_id = info["sample_string"]
                 if run_no not in self.track_panels:
-                    print("debug: creating new run #", run_no)
+                    print("debug: creating new run # {}, type {}".format(run_no,type(run_no)))
                     self.create_new_run(run_no=run_no)
+
                 if run_no in new_data_dict:
                     new_data_dict[run_no].append(
                         (
@@ -993,10 +1044,16 @@ class TrackerWindow(wx.Frame):
 
             # update track panel data
             for run_no in new_data_dict:
+                print("run_no {}, new_data_dict[run_no] {}".format(run_no,new_data_dict[run_no]))
                 self.track_panels[run_no].update_data(new_data=new_data_dict[run_no])
+                self.track_panels[run_no].set_sample_id(sample_id,run_no)
+                # update current plot
+                self.track_panels[run_no].update_plot()
+
+
 
         # update current plot
-        self.tracker_panel.update_plot()
+        #self.tracker_panel.update_plot()
 
     def onQuit(self, e):
         self.Close()
@@ -1004,6 +1061,23 @@ class TrackerWindow(wx.Frame):
         # TODO: CLEANUP ON EXIT!
         self.stop_run()
 
+
+    def onStop(self, e):
+        print("Debug Button Event!!")
+        """
+        self.nb_panel = wx.Panel(self)
+        # self.track_nb = AuiNotebook(self.nb_panel, style=wx.aui.AUI_NB_TOP)
+        self.track_nb = wx.Notebook(self.nb_panel, style=wx.NB_RIGHT)
+        self.nb_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.nb_sizer.Add(self.track_nb, 1, flag=wx.EXPAND | wx.ALL, border=3)
+        self.nb_panel.SetSizer(self.nb_sizer)
+        
+        # Notebook bindings
+        self.Bind(
+            wx.EVT_NOTEBOOK_PAGE_CHANGED, self.onPageChange, id=self.track_nb.GetId()
+        )
+        """        
+        self.reset_tabs()
 
 class MainTESTApp(wx.App):
     """ App for the main GUI window  """
