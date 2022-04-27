@@ -218,7 +218,7 @@ class TrackChart(wx.Panel):
         self.track_axes['resolution'] = self.track_figure.add_subplot(313)        
         set_subplot_labels(self.track_axes['spots'],None,"Found Spots")
         set_subplot_labels(self.track_axes['quality'],None,"Quality")
-        set_subplot_labels(self.track_axes['resolution'],"Frame","Resolution [1/Å]")
+        set_subplot_labels(self.track_axes['resolution'],"Frame","Resolution [Å]")
 
         self.track_figure.set_tight_layout(True)
         self.track_canvas = FigureCanvas(self, -1, self.track_figure)
@@ -348,7 +348,7 @@ class TrackChart(wx.Panel):
         clear_subplots(self.track_axes['resolution'])
         set_subplot_labels(self.track_axes['spots'],None,"Dozor Quality")
         set_subplot_labels(self.track_axes['quality'],None,"Nb. of Spots")
-        set_subplot_labels(self.track_axes['resolution'],"Frame Number","Resolution [1/Å]")        
+        set_subplot_labels(self.track_axes['resolution'],"Frame Number","Resolution [Å]")        
 
         self.xdata = np.array([]).astype(np.double)
         self.ydata = np.array([]).astype(np.double)
@@ -536,7 +536,11 @@ class TrackChart(wx.Panel):
             self.track_axes['quality'].set_xlim(self.x_min,self.x_max)
             self.track_axes['quality'].set_ylim(0,1.1*self.qdata.max())
             self.track_axes['resolution'].set_xlim(self.x_min,self.x_max)
-            self.track_axes['resolution'].set_ylim(0,1)
+            yticks = [0,0.1,0.25,0.5,0.8]
+            ytick_labels = ["Inf","10","4","2","1.25"]
+            self.track_axes['resolution'].set_yticks(yticks)
+            self.track_axes['resolution'].set_yticklabels(ytick_labels)
+            #self.track_axes['resolution'].set_ylim(0,1)
             
         else:
             self.x_min = -1
