@@ -1044,7 +1044,7 @@ class TrackerWindow(wx.Frame):
 
             # update track panel data
             for run_no in new_data_dict:
-                print("run_no {}, new_data_dict[run_no] {}".format(run_no,new_data_dict[run_no]))
+                #print("run_no {}, new_data_dict[run_no] {}".format(run_no,new_data_dict[run_no]))
                 self.track_panels[run_no].update_data(new_data=new_data_dict[run_no])
                 self.track_panels[run_no].set_sample_id(sample_id,run_no)
                 # update current plot
