@@ -612,6 +612,13 @@ class TrackChart(wx.Panel):
         self.main_window.tracker_panel.res_txt.SetLabel(res_label)
 
         # Test Sample Name
+        sample_id = self.main_window.tracker_panel.sample_id
+        run_no = self.main_window.tracker_panel.run_no
+        self.main_window.tracker_panel.pg_txt.SetLabel(sample_id)
+        self.main_window.tracker_panel.uc_txt.SetLabel(run_no)
+
+
+        #ALEK Update SAMPLE AND RUN HERE!
         #sample_txt = "test-sample-prefix"
         #self.main_window.tracker_panel.pg_txt.SetLabel(sample_txt)
 
@@ -671,7 +678,7 @@ class TrackerPanel(wx.Panel):
         self.run_number = run_number
         #Sample ID
         self.sample_id = "None"
-
+        self.run_no = "1"
 
         self.main_sizer = wx.GridBagSizer(10, 10)
 
@@ -768,6 +775,7 @@ class TrackerPanel(wx.Panel):
     #ADDITION
     def set_sample_id(self,sample_string, run_no):
         self.sample_id = sample_string
+        self.run_no = run_no
         self.pg_txt.SetLabel(sample_string)
         self.uc_txt.SetLabel(run_no)
 
@@ -795,10 +803,9 @@ class TrackerPanel(wx.Panel):
 
 class TrackerWindow(wx.Frame):
     def __init__(self, parent, id, title):
-        wx.Frame.__init__(self, parent, id, title, size=(1500, 600))
+        wx.Frame.__init__(self, parent, id, title, size=(1200, 1000))
         self.parent = parent
         self.onCollectorCounter = 0
-        self.tab_no = 1
 
         # initialize dictionary of tracker panels
         self.track_panels = {}
@@ -933,6 +940,7 @@ class TrackerWindow(wx.Frame):
             self.stop_run()
 
     def onPageChange(self, e):
+        print("Event: onPageChange:")
         self.set_current_chart_panel()
         self.tracker_panel.update_plot(reset=True)
 
@@ -950,7 +958,7 @@ class TrackerWindow(wx.Frame):
                 extant_runs = [int(r) for r in self.track_panels.keys()]
                 run_no = max(extant_runs) + 1
 
-        panel_title = "Tab {}".format(run_no)
+        panel_title = "Run {}".format(run_no)
         try:
             self.tracker_panel.save_chart_data()
         except:
@@ -1011,22 +1019,34 @@ class TrackerWindow(wx.Frame):
             del self.collector
             del self.ui_timer
 
+    def getTabString(self,sample_string,run_no_string, max_sample_string_length=20):
+        sample_label = sample_string
+        if len(sample_string) > max_sample_string_length:
+            sample_label = str(sample_string[:10])+"..."+str(sample_string[-10:])
+        return sample_label+"_"+str(run_no_string)
+
+
     def onCollectorInfo(self, e):
         """ Occurs on every wx.PostEvent instance; updates lists of images with
     spotfinding results """
         info_list = e.GetValue()
         # MEMORY LEAK self.all_info.extend(info_list)
         new_data_dict = {}
+        run_no_dict = {}
+        sample_id_dict = {}
         if info_list:
             for info in info_list:
                 run_no = info["run_no"]
                 sample_id = info["sample_string"]
-                if run_no not in self.track_panels:
-                    print("debug: creating new run # {}, type {}".format(run_no,type(run_no)))
-                    self.create_new_run(run_no=run_no)
+                tab_id = self.getTabString(info["sample_string"],info["run_no"])
+                run_no_dict[tab_id]=run_no
+                sample_id_dict[tab_id]=sample_id
+                if tab_id not in self.track_panels:
+                    print("debug: creating new run # {}, type {}".format(tab_id,type(tab_id)))
+                    self.create_new_run(run_no=tab_id)
 
-                if run_no in new_data_dict:
-                    new_data_dict[run_no].append(
+                if tab_id in new_data_dict:
+                    new_data_dict[tab_id].append(
                         (
                             info["frame_idx"],
                             info["n_spots"],
@@ -1036,7 +1056,7 @@ class TrackerWindow(wx.Frame):
                         )
                     )
                 else:
-                    new_data_dict[run_no] = [
+                    new_data_dict[tab_id] = [
                         (
                             info["frame_idx"],
                             info["n_spots"],
@@ -1047,12 +1067,12 @@ class TrackerWindow(wx.Frame):
                     ]
 
             # update track panel data
-            for run_no in new_data_dict:
+            for tab_id in new_data_dict:
                 #print("run_no {}, new_data_dict[run_no] {}".format(run_no,new_data_dict[run_no]))
-                self.track_panels[run_no].update_data(new_data=new_data_dict[run_no])
-                self.track_panels[run_no].set_sample_id(sample_id,run_no)
+                self.track_panels[tab_id].update_data(new_data=new_data_dict[tab_id])
+                self.track_panels[tab_id].set_sample_id( sample_id_dict[tab_id],run_no_dict[tab_id])
                 # update current plot
-                self.track_panels[run_no].update_plot()
+                self.track_panels[tab_id].update_plot()
 
 
 
