@@ -940,7 +940,7 @@ class TrackerWindow(wx.Frame):
             self.stop_run()
 
     def onPageChange(self, e):
-        print("Event: onPageChange:")
+        #print("Event: onPageChange:")
         self.set_current_chart_panel()
         self.tracker_panel.update_plot(reset=True)
 
