@@ -796,8 +796,10 @@ class TrackerPanel(wx.Panel):
         if reset:
             self.chart.reset_chart()
             self.chart.draw_plot(new_data=self.all_data)
+            self.chart.draw_bragg_line()
         print("update_plot all_data {}".format(len(self.all_data)))
         self.chart.draw_plot(new_data=self.new_data)
+        self.chart.draw_bragg_line()
         self.all_data.extend(self.new_data)
         self.new_data = []
 
