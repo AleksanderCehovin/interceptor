@@ -206,6 +206,9 @@ class TrackChart(wx.Panel):
         self.parent = parent
         self.zoom_ctrl = self.parent.GetParent().chart_zoom
 
+        #Keep track of first time draw event        
+        self.first_time_draw = True
+
         self.main_box = wx.StaticBox(self, label="Dozor Spotfinding Chart")
         self.main_fig_sizer = wx.StaticBoxSizer(self.main_box, wx.VERTICAL)
         self.SetSizer(self.main_fig_sizer)
@@ -532,16 +535,22 @@ class TrackChart(wx.Panel):
                 self.y_max = np.max(nref_y) + int(0.1 * np.max(nref_y))
 
             self.track_axes['spots'].set_xlim(self.x_min, self.x_max)
+            self.track_axes['spots'].set_xticklabels([])
             self.track_axes['spots'].set_ylim(0, self.y_max)
             self.track_axes['quality'].set_xlim(self.x_min,self.x_max)
+            self.track_axes['quality'].set_xticklabels([])
             self.track_axes['quality'].set_ylim(0,1.1*self.qdata.max())
             self.track_axes['resolution'].set_xlim(self.x_min,self.x_max)
             yticks = [0,0.1,0.25,0.5,0.8]
             ytick_labels = ["Inf","10","4","2","1.25"]
             self.track_axes['resolution'].set_yticks(yticks)
             self.track_axes['resolution'].set_yticklabels(ytick_labels)
+            #if self.first_time_draw:
+            is_y_grid_on = any([l.get_visible() for l in self.track_axes['resolution'].yaxis.get_gridlines()])
+            if not is_y_grid_on:
+                # Toggles horizontal help lines. Only need one call, but gets reset sometimes.
+                self.track_axes['resolution'].yaxis.grid(which="major",color='k',linestyle=':',linewidth=1)             
             #self.track_axes['resolution'].set_ylim(0,1)
-            
         else:
             self.x_min = -1
             self.x_max = 1
@@ -617,11 +626,11 @@ class TrackChart(wx.Panel):
         self.main_window.tracker_panel.pg_txt.SetLabel(sample_id)
         self.main_window.tracker_panel.uc_txt.SetLabel(run_no)
 
-
-        #ALEK Update SAMPLE AND RUN HERE!
-        #sample_txt = "test-sample-prefix"
-        #self.main_window.tracker_panel.pg_txt.SetLabel(sample_txt)
-
+        #Avoids bug related to first time draw.
+        if self.first_time_draw:
+            print("First Time Draw. Pre-updating Canvas.")
+            self.first_time_draw = False
+            self._update_canvas(self.track_canvas)
 
         # Draw extended plots
         self.track_axes['spots'].draw_artist(self.acc_plot['spots'])
@@ -805,7 +814,6 @@ class TrackerWindow(wx.Frame):
     def __init__(self, parent, id, title):
         wx.Frame.__init__(self, parent, id, title, size=(1200, 1000))
         self.parent = parent
-        self.onCollectorCounter = 0
 
         # initialize dictionary of tracker panels
         self.track_panels = {}
@@ -916,6 +924,7 @@ class TrackerWindow(wx.Frame):
 
 
     def onMinBragg(self, e):
+        print("onMinBragg")
         self.tracker_panel.chart.draw_bragg_line()
 
     def onChartRange(self, e):
@@ -1029,6 +1038,7 @@ class TrackerWindow(wx.Frame):
     def onCollectorInfo(self, e):
         """ Occurs on every wx.PostEvent instance; updates lists of images with
     spotfinding results """
+
         info_list = e.GetValue()
         # MEMORY LEAK self.all_info.extend(info_list)
         new_data_dict = {}
@@ -1074,8 +1084,6 @@ class TrackerWindow(wx.Frame):
                 # update current plot
                 self.track_panels[tab_id].update_plot()
 
-
-
         # update current plot
         #self.tracker_panel.update_plot()
 
@@ -1110,7 +1118,7 @@ class MainTESTApp(wx.App):
         from interceptor import __version__ as intxr_version
 
         self.frame = TrackerWindow(
-            None, -1, title="INTERCEPTOR TEST v.{}" "".format(intxr_version)
+            None, -1, title="MAXIV DOZOR INTERCEPTOR v.{}" "".format(intxr_version)
         )
         self.frame.SetMinSize(self.frame.GetEffectiveMinSize())
         self.frame.SetPosition((150, 150))
