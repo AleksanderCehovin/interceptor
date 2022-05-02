@@ -11,7 +11,7 @@ import numpy as np
 import wx
 import copy
 import gc
-
+import time
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -816,6 +816,9 @@ class TrackerWindow(wx.Frame):
     def __init__(self, parent, id, title):
         wx.Frame.__init__(self, parent, id, title, size=(1200, 1000))
         self.parent = parent
+        #New Runs
+        self.is_new_run_ongoing = False
+        self.data_cache = []
 
         # initialize dictionary of tracker panels
         self.track_panels = {}
@@ -1046,16 +1049,36 @@ class TrackerWindow(wx.Frame):
         new_data_dict = {}
         run_no_dict = {}
         sample_id_dict = {}
+        
+        if self.is_new_run_ongoing:
+            print("CREATE TAB ONGOING: len(info_list) {}, type {}".format(len(info_list),type(info_list)))
+            if info_list:
+                self.data_cache = self.data_cache + info_list
+            return
+
         if info_list:
+
+            if len(self.data_cache) > 0:
+                for i in range(0,len(self.data_cache)):
+                    info_list.append(self.data_cache[i])
+                self.data_cache=[]
+
             for info in info_list:
                 run_no = info["run_no"]
                 sample_id = info["sample_string"]
                 tab_id = self.getTabString(info["sample_string"],info["run_no"])
                 run_no_dict[tab_id]=run_no
                 sample_id_dict[tab_id]=sample_id
+
                 if tab_id not in self.track_panels:
-                    print("debug: creating new run # {}, type {}".format(tab_id,type(tab_id)))
+                    #print("debug: creating new run # {}, type {}".format(tab_id,type(tab_id)))
+                    self.is_new_run_ongoing = True
+                    start_time = time.time()
                     self.create_new_run(run_no=tab_id)
+                    self.is_new_run_ongoing = False
+                    end_time = time.time()
+                    print("debug: create_new_run {:.2f}".format(end_time-start_time))
+                    
 
                 if tab_id in new_data_dict:
                     new_data_dict[tab_id].append(

@@ -19,7 +19,7 @@ class MainApp(wx.App):
     def OnInit(self):
         intx_version = "0.000.00"
         self.frame = TrackerWindow(
-            None, -1, title="INTERCEPTOR v.{}" "".format(intxr_version)
+            None, -1, title="BIOMAX DOZOR INTERCEPTOR v.{}" "".format(intxr_version)
         )
         self.frame.SetMinSize(self.frame.GetEffectiveMinSize())
         self.frame.SetPosition((150, 150))
