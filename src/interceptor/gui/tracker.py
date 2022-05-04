@@ -860,7 +860,6 @@ class TrackerWindow(wx.Frame):
         self.toolbar.AddControl(txt_div)
         self.tb_ctrl_port = self.toolbar.AddControl(control=ctr_port)
 
-
         # Connect toggle
         sock_off_bmp = find_icon("network", size=32)
         self.tb_btn_conn = self.toolbar.AddTool(
@@ -880,8 +879,6 @@ class TrackerWindow(wx.Frame):
             kind=wx.ITEM_NORMAL,
             shortHelp="Debug Trigger Button",
         )
-
-
 
         # Quit button
         self.toolbar.AddStretchableSpace()
@@ -989,19 +986,25 @@ class TrackerWindow(wx.Frame):
 
     def reset_tabs(self):
 
-        run_no = 1
-        panel_title = "Run {}".format(run_no)
-        # initialize dictionary of tracker panels
-        self.track_panels = {}
+        #self.track_nb.DeleteAllPages()
+        current_panel = self.track_nb.GetCurrentPage()
+        print("current_panel {}".format(current_panel))
+        print("self.track_panels() {}".format(self.track_panels))
+        tabs_to_remove = []
+        for tab_label in self.track_panels.keys():
+            print("tab_label {}".format(tab_label))
+            if current_panel != self.track_panels[tab_label]:
+                print("Remove tab {}".format(tab_label))
+                tabs_to_remove.append(tab_label)
 
-        self.tracker_panel = TrackerPanel(
-            self.track_nb, main_window=self, run_number=run_no
-        )
-        self.track_panels[run_no] = self.tracker_panel
-        self.track_nb.AddPage(self.tracker_panel, panel_title, select=True)
-
-        self.Bind(wx.EVT_SPINCTRL, self.onMinBragg, self.tracker_panel.min_bragg.ctr)
-        # self.Bind(EVT_ZOOM, self.onChartRange)
+        for tab in tabs_to_remove:
+            page = self.track_nb.FindPage(self.track_panels[tab])
+            #self.track_nb.DeletePage(page)
+            self.track_nb.RemovePage(page)                
+            self.track_panels.pop(tab)
+            print("AFTER DELETE: self.track_panels() {}".format(self.track_panels))
+            post_panel = self.track_nb.GetCurrentPage()
+            print("post_panel {}".format(post_panel))
 
     def create_collector(self):
         self.ui_timer = wx.Timer(self)
@@ -1050,6 +1053,7 @@ class TrackerWindow(wx.Frame):
         run_no_dict = {}
         sample_id_dict = {}
         
+
         if self.is_new_run_ongoing:
             print("CREATE TAB ONGOING: len(info_list) {}, type {}".format(len(info_list),type(info_list)))
             if info_list:
@@ -1071,7 +1075,7 @@ class TrackerWindow(wx.Frame):
                 sample_id_dict[tab_id]=sample_id
 
                 if tab_id not in self.track_panels:
-                    #print("debug: creating new run # {}, type {}".format(tab_id,type(tab_id)))
+                    print("debug: creating new run # {}, type {}".format(tab_id,type(tab_id)))
                     self.is_new_run_ongoing = True
                     start_time = time.time()
                     self.create_new_run(run_no=tab_id)
@@ -1103,11 +1107,14 @@ class TrackerWindow(wx.Frame):
 
             # update track panel data
             for tab_id in new_data_dict:
-                #print("run_no {}, new_data_dict[run_no] {}".format(run_no,new_data_dict[run_no]))
-                self.track_panels[tab_id].update_data(new_data=new_data_dict[tab_id])
-                self.track_panels[tab_id].set_sample_id( sample_id_dict[tab_id],run_no_dict[tab_id])
-                # update current plot
-                self.track_panels[tab_id].update_plot()
+                if tab_id in self.track_panels:
+                    #print("run_no {}, new_data_dict[run_no] {}".format(run_no,new_data_dict[run_no]))
+                    self.track_panels[tab_id].update_data(new_data=new_data_dict[tab_id])
+                    self.track_panels[tab_id].set_sample_id( sample_id_dict[tab_id],run_no_dict[tab_id])
+                    # update current plot
+                    self.track_panels[tab_id].update_plot()
+                else:
+                    print("ERROR, track_panels changed")
 
         # update current plot
         #self.tracker_panel.update_plot()
@@ -1121,19 +1128,6 @@ class TrackerWindow(wx.Frame):
 
     def onStop(self, e):
         print("Debug Button Event!!")
-        """
-        self.nb_panel = wx.Panel(self)
-        # self.track_nb = AuiNotebook(self.nb_panel, style=wx.aui.AUI_NB_TOP)
-        self.track_nb = wx.Notebook(self.nb_panel, style=wx.NB_RIGHT)
-        self.nb_sizer = wx.BoxSizer(wx.VERTICAL)
-        self.nb_sizer.Add(self.track_nb, 1, flag=wx.EXPAND | wx.ALL, border=3)
-        self.nb_panel.SetSizer(self.nb_sizer)
-        
-        # Notebook bindings
-        self.Bind(
-            wx.EVT_NOTEBOOK_PAGE_CHANGED, self.onPageChange, id=self.track_nb.GetId()
-        )
-        """        
         self.reset_tabs()
 
 class MainTESTApp(wx.App):
