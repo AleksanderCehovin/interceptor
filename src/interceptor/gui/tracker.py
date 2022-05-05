@@ -10,7 +10,6 @@ Description : Interceptor tracking module (GUI elements)
 import numpy as np
 import wx
 import copy
-import gc
 import time
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
@@ -30,7 +29,22 @@ icon_cache = {}
 itx_EVT_ZOOM = wx.NewEventType()
 EVT_ZOOM = wx.PyEventBinder(itx_EVT_ZOOM, 1)
 
+#For very long measurements, a single run can collect hundreds of
+#thousands frames. In this case, the GUI will show a moving window
+#of data determined by RESIZE_WINDOW. The data window will move in
+#steps of MOVING_WINDOW_STEP_SIZE
 RESIZE_WINDOW = 30000
+MOVING_WINDOW_STEP_SIZE = 5000
+
+#Maximum length of tab string name.
+MAX_TAB_TEXT_LENGTH = 30
+
+#UI Timer Period [ms]
+#Determines the maximum update frequency of the UI. This must always
+#be larger than the update execution time. If not, I think event are
+#starting to stack up, the GUI slows down, and eventually there is a
+#stack overflow.
+UI_TIMER_PERIOD_MS = 1000
 
 class EvtChartZoom(wx.PyCommandEvent):
     """ Send event when any zoom event happens  """
@@ -399,7 +413,7 @@ class TrackChart(wx.Panel):
         self.zoom_span.set_active(True)
         self._update_canvas(canvas=self.track_canvas)
 
-    def draw_bragg_line(self):
+    def draw_bragg_line(self,draw_plot=True):
         min_bragg = self.main_window.tracker_panel.min_bragg.ctr.GetValue()
         if min_bragg > 0:
             self.bragg_line.set_alpha(1)
@@ -407,13 +421,16 @@ class TrackChart(wx.Panel):
             self.bragg_line.set_alpha(0)
         self.bragg_line.set_ydata(min_bragg)
         try:
-            self.draw_plot()
+            #If call is done in connection with a later draw_plot event,
+            #there is an option to skip this draw_plot.
+            if draw_plot:
+                self.draw_plot()
         except AttributeError:
             pass
 
     def get_chart_data(self):
         #return  copy.deepcopy(list(zip(self.xdata, self.ydata, self.idata, self.rdata, self.qdata)))        
-        return  copy.deepcopy(list(zip(self.xdata, self.qdata, self.idata, self.rdata, self.ydata)))        
+        return  list(zip(self.xdata, self.qdata, self.idata, self.rdata, self.ydata))        
 
     def draw_plot(
         self, new_data=None, new_res=None, new_x=None, new_y=None, new_i=None
@@ -463,53 +480,18 @@ class TrackChart(wx.Panel):
 
         nref_xy = list(zip(nref_x, nref_y))
 
-        """
+        print("No. x-axis points: {}".format(self.xdata.shape[0]))
         if self.xdata.shape[0] > RESIZE_WINDOW:
             self.resize_counter += 1
-            def re_bin(array):
-                N=array.shape[0]
-                M = 0
-                if self.resize_counter == 3:
-                    M = RESIZE_WINDOW//(4)
-                if (N-M) % 2 == 1:
-                    N = N -1
-                return np.mean(array[M:N].reshape(-1,2),1)
-            self.xdata = re_bin(self.xdata)
-            self.ydata = re_bin(self.ydata)
-            self.rdata = re_bin(self.rdata)
-            self.qdata = re_bin(self.qdata)
-            self.idata = re_bin(self.idata)            
-            nref_x = re_bin(nref_x)            
-            nref_y = re_bin(nref_y)            
-            nref_i = re_bin(nref_i)
+            self.xdata = self.xdata[MOVING_WINDOW_STEP_SIZE:]
+            self.ydata = self.ydata[MOVING_WINDOW_STEP_SIZE:]
+            self.rdata = self.rdata[MOVING_WINDOW_STEP_SIZE:]
+            self.qdata = self.qdata[MOVING_WINDOW_STEP_SIZE:]
+            self.idata = self.idata[MOVING_WINDOW_STEP_SIZE:]            
+            nref_x = nref_x[MOVING_WINDOW_STEP_SIZE:]            
+            nref_y = nref_y[MOVING_WINDOW_STEP_SIZE:]            
+            nref_i = nref_i[MOVING_WINDOW_STEP_SIZE:]
             nref_xy = list(zip(nref_x, nref_y))            
-            if self.resize_counter == 3:
-                self.resize_counter = 2            
-        """
-        if self.xdata.shape[0] > RESIZE_WINDOW:
-            self.resize_counter += 1
-            self.xdata = copy.deepcopy(self.xdata[5000:])
-            self.ydata = copy.deepcopy(self.ydata[5000:])
-            self.rdata = copy.deepcopy(self.rdata[5000:])
-            self.qdata = copy.deepcopy(self.qdata[5000:])
-            self.idata = copy.deepcopy(self.idata[5000:])            
-            nref_x = copy.deepcopy(nref_x[5000:])            
-            nref_y = copy.deepcopy(nref_y[5000:])            
-            nref_i = copy.deepcopy(nref_i[5000:])
-            nref_xy = list(zip(nref_x, nref_y))            
-            gc.collect()
-
-
-        #DEBUG
-        """
-        print("self.resize_counter {}".format(self.resize_counter))
-        print("self.xdata {}".format(self.xdata.shape))
-        print("self.ydata {}".format(self.ydata.shape))        
-        print("self.rdata {}".format(self.rdata.shape))                
-        print("self.qdata {}".format(self.qdata.shape))                        
-        print("self.idata {}".format(self.idata.shape))                                
-        print("nref_xy {} {}".format(len(nref_xy),len(nref_xy[0])))                                
-        """
 
         # identify plotted data boundaries
         if nref_x != [] and nref_y != []:
@@ -790,16 +772,16 @@ class TrackerPanel(wx.Panel):
 
     def save_chart_data(self):
         self.all_data = self.chart.get_chart_data()
-        gc.collect()
 
     def update_plot(self, reset=False):
         if reset:
             self.chart.reset_chart()
+            self.chart.draw_bragg_line(False)
             self.chart.draw_plot(new_data=self.all_data)
-            self.chart.draw_bragg_line()
-        print("update_plot all_data {}".format(len(self.all_data)))
+
+        #print("update_plot all_data {}".format(len(self.all_data)))
+        self.chart.draw_bragg_line(False)
         self.chart.draw_plot(new_data=self.new_data)
-        self.chart.draw_bragg_line()
         self.all_data.extend(self.new_data)
         self.new_data = []
 
@@ -870,7 +852,7 @@ class TrackerWindow(wx.Frame):
             shortHelp="Connect to / Disconnect from beamline",
         )
 
-        #TEST
+        # Test Buttton. Currently triggers tab removal.
         stop_bmp = find_icon("stop", size=32)
         self.tb_btn_stop = self.toolbar.AddTool(
             toolId=wx.ID_ANY,
@@ -902,7 +884,7 @@ class TrackerWindow(wx.Frame):
         self.Bind(wx.EVT_TOOL, self.onQuit, self.tb_btn_quit)
         self.Bind(wx.EVT_TOOL, self.onConnect, self.tb_btn_conn)
         self.Bind(wx.EVT_CHOICE, self.onBLChoice, self.tb_chc_bl.GetControl())
-        #DEBUG
+        #DEBUG Button Event
         self.Bind(wx.EVT_TOOL, self.onStop, self.tb_btn_stop)        
 
         # Notebook bindings
@@ -951,9 +933,11 @@ class TrackerWindow(wx.Frame):
             self.stop_run()
 
     def onPageChange(self, e):
-        #print("Event: onPageChange:")
+        print("Event: onPageChange:")
         self.set_current_chart_panel()
-        self.tracker_panel.update_plot(reset=True)
+        #Avoid re-drawing page on tab change. Assuming all but the one latest tab
+        #is active 
+        #self.tracker_panel.update_plot(reset=True)
 
     def set_current_chart_panel(self):
         # Settings bindings
@@ -1020,7 +1004,7 @@ class TrackerWindow(wx.Frame):
         sb_msg = "CONNECTED TO tcp://{}:{}".format(host, port)
         self.sb.SetStatusText(sb_msg, i=1)
         self.sb.SetStatusBitmap(connected=True)
-        self.ui_timer.Start(250)
+        self.ui_timer.Start(UI_TIMER_PERIOD_MS) 
         self.collector.connect(host=host, port=port)
         self.collector.start()
 
@@ -1036,10 +1020,12 @@ class TrackerWindow(wx.Frame):
             del self.collector
             del self.ui_timer
 
-    def getTabString(self,sample_string,run_no_string, max_sample_string_length=20):
+    def getTabString(self,sample_string,run_no_string, 
+                    max_sample_string_length=MAX_TAB_TEXT_LENGTH):
         sample_label = sample_string
+        N = max(1,(MAX_TAB_TEXT_LENGTH-1)//2) 
         if len(sample_string) > max_sample_string_length:
-            sample_label = str(sample_string[:10])+"..."+str(sample_string[-10:])
+            sample_label = str(sample_string[:N])+"..."+str(sample_string[-N:])
         return sample_label+"_"+str(run_no_string)
 
 
@@ -1053,7 +1039,11 @@ class TrackerWindow(wx.Frame):
         run_no_dict = {}
         sample_id_dict = {}
         
+        print("onCollectorInfo\n")
 
+        #The GUI can be overrun by data during tab switches. This should save incoming
+        #data until the new tab/run is created. Not a problem after some tuning and
+        #fixes, but can still happen.
         if self.is_new_run_ongoing:
             print("CREATE TAB ONGOING: len(info_list) {}, type {}".format(len(info_list),type(info_list)))
             if info_list:
@@ -1081,7 +1071,7 @@ class TrackerWindow(wx.Frame):
                     self.create_new_run(run_no=tab_id)
                     self.is_new_run_ongoing = False
                     end_time = time.time()
-                    print("debug: create_new_run {:.2f}".format(end_time-start_time))
+                    print("debug: create_new_run time: {:.2f}s".format(end_time-start_time))
                     
 
                 if tab_id in new_data_dict:
@@ -1112,12 +1102,12 @@ class TrackerWindow(wx.Frame):
                     self.track_panels[tab_id].update_data(new_data=new_data_dict[tab_id])
                     self.track_panels[tab_id].set_sample_id( sample_id_dict[tab_id],run_no_dict[tab_id])
                     # update current plot
-                    self.track_panels[tab_id].update_plot()
+                    #self.track_panels[tab_id].update_plot()
                 else:
                     print("ERROR, track_panels changed")
 
         # update current plot
-        #self.tracker_panel.update_plot()
+        self.tracker_panel.update_plot()
 
     def onQuit(self, e):
         self.Close()
@@ -1128,6 +1118,7 @@ class TrackerWindow(wx.Frame):
 
     def onStop(self, e):
         print("Debug Button Event!!")
+        #Debug button removes all but the active tab.
         self.reset_tabs()
 
 class MainTESTApp(wx.App):
