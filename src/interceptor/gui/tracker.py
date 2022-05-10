@@ -513,7 +513,7 @@ class TrackChart(wx.Panel):
 
             if min_bragg > np.max(nref_y):
                 self.y_max = min_bragg + int(0.1 * min_bragg)
-            else:
+            else: 
                 self.y_max = np.max(nref_y) + int(0.1 * np.max(nref_y))
 
             self.track_axes['spots'].set_xlim(self.x_min, self.x_max)
@@ -521,7 +521,7 @@ class TrackChart(wx.Panel):
             self.track_axes['spots'].set_ylim(0, self.y_max)
             self.track_axes['quality'].set_xlim(self.x_min,self.x_max)
             self.track_axes['quality'].set_xticklabels([])
-            self.track_axes['quality'].set_ylim(0,1.1*self.qdata.max())
+            self.track_axes['quality'].set_ylim(0, 1.1*self.qdata.max())
             self.track_axes['resolution'].set_xlim(self.x_min,self.x_max)
             yticks = [0,0.1,0.25,0.5,0.8]
             ytick_labels = ["Inf","10","4","2","1.25"]
@@ -562,14 +562,18 @@ class TrackChart(wx.Panel):
         if acc_x:
             self.acc_plot['spots'].set_xdata(acc_x)
             self.acc_plot['spots'].set_ydata(acc_y)
-            self.acc_plot['quality'].set_xdata(nref_x)
-            self.acc_plot['quality'].set_ydata(self.qdata)
-            self.acc_plot['resolution'].set_xdata(nref_x)
-            #Add a small number in denominator to avoid potential divison by zero
-            self.acc_plot['resolution'].set_ydata( 1./(0.01+self.rdata) )
         if rej_x:
             self.rej_plot['spots'].set_xdata(rej_x)
             self.rej_plot['spots'].set_ydata(rej_y)
+        #Always update the other plots regardless of the 
+        #thresholded populations above
+        self.acc_plot['quality'].set_xdata(nref_x)
+        self.acc_plot['quality'].set_ydata(self.qdata)
+        self.acc_plot['resolution'].set_xdata(nref_x)
+        #Add a small number in denominator to avoid potential divison by zero
+        self.acc_plot['resolution'].set_ydata( 1./(0.01+self.rdata) )
+
+
 
         # plot indexed
         if new_i is not None:
@@ -967,6 +971,7 @@ class TrackerWindow(wx.Frame):
 
         self.Bind(wx.EVT_SPINCTRL, self.onMinBragg, self.tracker_panel.min_bragg.ctr)
         # self.Bind(EVT_ZOOM, self.onChartRange)
+
 
     def reset_tabs(self):
 
