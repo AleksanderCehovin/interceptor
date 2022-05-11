@@ -10,8 +10,7 @@ This is an Interceptor,  https://github.com/ssrl-px/interceptor,  fork for exper
 
 In this project, the GUI part has been isolated and adapted to present Dozor spotfinding quality metrics. Much has been
 removed from the original code, and this repository is much easier to install in a Conda environment. There are no more depencies on DIALS.
-The simulator/ directory contains python scripts that can be used to feed the GUI with fake test data for standalone
-evaluation and debugging. 
+The simulator/ directory contains a python script that can be used to feed the GUI with fake test data for standalone evaluation and debugging. 
 
 Some notes on the code:
 
