@@ -24,6 +24,10 @@ Some notes on the code:
 
 aleksander.cehovin@maxiv.lu.se
 
+# Example Images
+
+![This is an image](/doc/images/fig_1.png)
+
 
 # Installing the decoupled GUI
 
