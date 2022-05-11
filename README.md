@@ -26,7 +26,10 @@ aleksander.cehovin@maxiv.lu.se
 
 # Example Images
 
-![This is an image](doc/images/fig_1.png)
+Example from datacollection at Biomax Max IV by Monika Bjelcic
+
+![Example of real datacollection](doc/images/fig_1.png)
+
 
 
 # Installing the decoupled GUI
@@ -60,3 +63,13 @@ The interceptor GUI is now available as "intxr.gui"
 There is a simulation folder where two simple scripts can be used to generate the data-stream
 the interceptor GUI relies upon as data input.
 
+### Simulation Data Examples
+
+Test data with GUI using quality for hit rate calculations
+
+![Simulation with quality threshold](doc/images/test_gui_quality.png)
+
+
+Test data with GUI using resolution for hit rate calculations
+
+![Simulation with resolutin threshold](doc/images/test_gui_resolution.png)

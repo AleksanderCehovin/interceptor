@@ -105,7 +105,7 @@ for i in range(0,N):
         sample_no = run_no//3
         #Very Long Sample ID
         #sample_id = "sample-id-{}".format(sample_no)
-        sample_id = "sample-to-long-name-but-why-not-id-{}".format(sample_no)
+        sample_id = "sample-too-long-name-but-why-not-id-{}".format(sample_no)
         img_no = 0 # Reset image counter each new run
         period = random.randint(100,500)
         time.sleep(2)
