@@ -22,7 +22,7 @@ RUN_LENGTH=20000
 
 #Maximum number of runs. Each run generates a tab in the GUI, which
 #allocates memory. Don't set this to astronomical values.
-MAX_NO_RUNS=20
+MAX_NO_RUNS=10
 #Rate of indexed frames as a modulo number 
 INDEXED_RATE=20
 
@@ -103,10 +103,9 @@ for i in range(0,N):
         run_no += 1
         #run_no = 1 # DEBUG
         sample_no = run_no//3
-        #sample_no += 1
         #Very Long Sample ID
-        sample_id = "sample-id-{}".format(sample_no)
-        #sample_id = "sample-to-long-name-but-why-not-id-{}".format(sample_no)
+        #sample_id = "sample-id-{}".format(sample_no)
+        sample_id = "sample-to-long-name-but-why-not-id-{}".format(sample_no)
         img_no = 0 # Reset image counter each new run
         period = random.randint(100,500)
         time.sleep(2)

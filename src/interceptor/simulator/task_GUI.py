@@ -13,6 +13,7 @@ import zmq
 
 #Connection port to feeding process
 PORT=5557
+#PORT=99999
 
 #Sleep time between collection attempts
 SLEEP_S = 0
@@ -40,6 +41,7 @@ if USE_PUSH_PULL:
 else:
     receiver = context.socket(zmq.SUB)
     #receiver.connect("tcp://localhost:{}".format(PORT))
+    #receiver.connect("tcp://fe0:{}".format(PORT)) #DEBUG
     receiver.connect("tcp://127.0.1.1:{}".format(PORT)) #DEBUG
     topic_token = GUI_TOPIC
     receiver.setsockopt(zmq.SUBSCRIBE,topic_token.encode('utf-8'))

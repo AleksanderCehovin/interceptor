@@ -46,6 +46,7 @@ MAX_TAB_TEXT_LENGTH = 30
 #stack overflow.
 UI_TIMER_PERIOD_MS = 1000
 
+
 class EvtChartZoom(wx.PyCommandEvent):
     """ Send event when any zoom event happens  """
 
@@ -214,11 +215,12 @@ def clear_subplots(subplot_instance):
     subplot_instance.patch.set_visible(False)
 
 class TrackChart(wx.Panel):
-    def __init__(self, parent, main_window):
+    def __init__(self, parent, main_window, use_resolution=False):
         wx.Panel.__init__(self, parent, size=(100, 100))
         self.main_window = main_window
         self.parent = parent
         self.zoom_ctrl = self.parent.GetParent().chart_zoom
+        self.use_resolution = use_resolution
 
         #Keep track of first time draw event        
         self.first_time_draw = True
@@ -230,12 +232,23 @@ class TrackChart(wx.Panel):
         self.resize_counter = 0 # ALEK
         self.track_figure = Figure()
         self.track_axes = {}
-        self.track_axes['spots'] = self.track_figure.add_subplot(311)
-        self.track_axes['quality'] = self.track_figure.add_subplot(312)
-        self.track_axes['resolution'] = self.track_figure.add_subplot(313)        
-        set_subplot_labels(self.track_axes['spots'],None,"Found Spots")
+
+        #Presentation depends on whether thresholding and hitrate is based 
+        #on Dozor quality metric or resolution
+        if self.use_resolution:
+            self.track_axes['resolution'] = self.track_figure.add_subplot(311)                        
+            self.track_axes['quality'] = self.track_figure.add_subplot(312)        
+            self.track_axes['spots'] = self.track_figure.add_subplot(313)
+            set_subplot_labels(self.track_axes['resolution'],None,"Resolution [Å]")        
+            set_subplot_labels(self.track_axes['spots'],"Frame","Found Spots")
+        else:
+            self.track_axes['quality'] = self.track_figure.add_subplot(311)            
+            self.track_axes['spots'] = self.track_figure.add_subplot(312)
+            self.track_axes['resolution'] = self.track_figure.add_subplot(313)        
+            set_subplot_labels(self.track_axes['resolution'],"Frame","Resolution [Å]")        
+            set_subplot_labels(self.track_axes['spots'],None,"Found Spots")                    
+
         set_subplot_labels(self.track_axes['quality'],None,"Quality")
-        set_subplot_labels(self.track_axes['resolution'],"Frame","Resolution [Å]")
 
         self.track_figure.set_tight_layout(True)
         self.track_canvas = FigureCanvas(self, -1, self.track_figure)
@@ -363,15 +376,22 @@ class TrackChart(wx.Panel):
         clear_subplots(self.track_axes['spots'])
         clear_subplots(self.track_axes['quality'])
         clear_subplots(self.track_axes['resolution'])
-        set_subplot_labels(self.track_axes['spots'],None,"Dozor Quality")
-        set_subplot_labels(self.track_axes['quality'],None,"Nb. of Spots")
-        set_subplot_labels(self.track_axes['resolution'],"Frame Number","Resolution [Å]")        
+
+        if self.use_resolution:
+            set_subplot_labels(self.track_axes['resolution'],None,"Resolution [Å]")        
+            set_subplot_labels(self.track_axes['quality'],None,"Dozor Quality")
+            set_subplot_labels(self.track_axes['spots'],"Frame Number","Nb. of Spots")
+        else:
+            set_subplot_labels(self.track_axes['spots'],None,"Nb. of Spots")
+            set_subplot_labels(self.track_axes['quality'],None,"Dozor Quality")
+            set_subplot_labels(self.track_axes['resolution'],"Frame Number","Resolution [Å]")        
 
         self.xdata = np.array([]).astype(np.double)
         self.ydata = np.array([]).astype(np.double)
         self.idata = np.array([]).astype(np.double)
         self.rdata = []
         self.qdata = []
+        self.sdata = []        
         self.x_min = 0
         self.x_max = 1
         self.y_max = 1
@@ -389,23 +409,32 @@ class TrackChart(wx.Panel):
 
         self.acc_plot = {}
         self.rej_plot = {}
-        self.acc_plot['spots'] = self.track_axes['spots'].plot([], [], "o", color="#4575b4",picker=5)[0]
-        self.rej_plot['spots'] = self.track_axes['spots'].plot([], [], "o", color="#d73027",picker=5)[0]
-        self.acc_plot['quality'] = self.track_axes['quality'].plot([], [], "o", color="#4575b4")[0]
-        self.acc_plot['resolution'] = self.track_axes['resolution'].plot([], [], "o", color="#4575b4")[0]
+        
+        if self.use_resolution:        
+            LABEL_ONE = "resolution"
+            LABEL_TWO = "quality"
+            LABEL_THREE = "spots"
+        else:
+            LABEL_ONE = "quality"
+            LABEL_TWO = "spots"
+            LABEL_THREE = "resolution"            
 
+        self.acc_plot[LABEL_ONE] = self.track_axes[LABEL_ONE].plot([], [], "o", color="#4575b4",picker=5)[0]
+        self.rej_plot[LABEL_ONE] = self.track_axes[LABEL_ONE].plot([], [], "o", color="#d73027",picker=5)[0]
+        self.acc_plot[LABEL_TWO] = self.track_axes[LABEL_TWO].plot([], [], "o", color="#4575b4")[0]
+        self.acc_plot[LABEL_THREE] = self.track_axes[LABEL_THREE].plot([], [], "o", color="#4575b4")[0]
 
-        self.idx_plot = self.track_axes['spots'].plot([], [], "wo", ms=2)[0]
-        self.bragg_line = self.track_axes['spots'].axhline(0, c="#4575b4", ls=":", alpha=0)
-        self.highlight = self.track_axes['spots'].axvspan(
+        self.idx_plot = self.track_axes[LABEL_ONE].plot([], [], "wo", ms=2)[0]
+        self.bragg_line = self.track_axes[LABEL_ONE].axhline(0, c="#4575b4", ls=":", alpha=0)
+        self.highlight = self.track_axes[LABEL_ONE].axvspan(
             0.5, 0.5, ls="--", alpha=0, fc="#deebf7", ec="#2171b5"
         )
-        self.track_axes['spots'].set_autoscaley_on(True)
-        self.track_axes['quality'].set_autoscaley_on(True)
-        self.track_axes['resolution'].set_autoscaley_on(True)
+        self.track_axes[LABEL_ONE].set_autoscaley_on(True)
+        self.track_axes[LABEL_TWO].set_autoscaley_on(True)
+        self.track_axes[LABEL_THREE].set_autoscaley_on(True)
 
         self.zoom_span = SpanSelector(
-            ax=self.track_axes['spots'],
+            ax=self.track_axes[LABEL_ONE],
             onselect=self.onSelect,
             direction="horizontal",
             rectprops=dict(alpha=0.5, ls=":", fc="#ffffd4", ec="#8c2d04"),
@@ -430,7 +459,7 @@ class TrackChart(wx.Panel):
 
     def get_chart_data(self):
         #return  copy.deepcopy(list(zip(self.xdata, self.ydata, self.idata, self.rdata, self.qdata)))        
-        return  list(zip(self.xdata, self.qdata, self.idata, self.rdata, self.ydata))        
+        return  list(zip(self.xdata, self.ydata , self.idata, self.rdata, self.qdata))        
 
     def draw_plot(
         self, new_data=None, new_res=None, new_x=None, new_y=None, new_i=None
@@ -445,23 +474,43 @@ class TrackChart(wx.Panel):
     :param new_i: a list of x-values for indexed frames
     """
         new_quality = None
-
+        new_spots = None
+        
         # get Bragg spots count cutoff line from UI widget
         min_bragg = self.main_window.tracker_panel.min_bragg.ctr.GetValue()
+        if self.use_resolution:
+            #Resolution thresholds are inverted
+            min_bragg = 1/min_bragg
 
         # append new data (if available) to data lists
         if new_data:
-            new_x, new_quality, new_i, new_res, new_y = list(zip(*new_data))
+            #new_x, new_quality, new_i, new_res, new_y = list(zip(*new_data))
+            new_frame, new_spots, new_i, new_res, new_quality = list(zip(*new_data))
+            if self.use_resolution:
+                new_x = new_frame
+                new_y = new_res
+            else:
+                new_x = new_frame
+                new_y = new_quality                
+
         if new_x and new_y:
             new_x_arr = np.array(new_x).astype(np.double)
             nref_x = np.append(self.xdata, new_x_arr)
             self.xdata = nref_x
             new_y_arr = np.array(new_y).astype(np.double)
-            nref_y = np.append(self.ydata, new_y_arr)
+            if self.use_resolution:
+                nref_y = np.append(self.ydata, 1./(0.01+new_y_arr) )
+            else:
+                nref_y = np.append(self.ydata, new_y_arr)
             self.ydata = nref_y
         else:
             nref_x = self.xdata
             nref_y = self.ydata
+
+        #Needed when resolution is to be thresholded.
+        if new_spots:
+            new_spots_arr = np.array(new_spots).astype(np.double)
+            self.sdata = np.append(self.sdata, new_spots_arr)
 
         if new_res:
             new_res_arr = np.array(new_res).astype(np.double)
@@ -486,12 +535,15 @@ class TrackChart(wx.Panel):
             self.xdata = self.xdata[MOVING_WINDOW_STEP_SIZE:]
             self.ydata = self.ydata[MOVING_WINDOW_STEP_SIZE:]
             self.rdata = self.rdata[MOVING_WINDOW_STEP_SIZE:]
+            self.sdata = self.sdata[MOVING_WINDOW_STEP_SIZE:]
             self.qdata = self.qdata[MOVING_WINDOW_STEP_SIZE:]
             self.idata = self.idata[MOVING_WINDOW_STEP_SIZE:]            
             nref_x = nref_x[MOVING_WINDOW_STEP_SIZE:]            
             nref_y = nref_y[MOVING_WINDOW_STEP_SIZE:]            
             nref_i = nref_i[MOVING_WINDOW_STEP_SIZE:]
+
             nref_xy = list(zip(nref_x, nref_y))            
+
 
         # identify plotted data boundaries
         if nref_x != [] and nref_y != []:
@@ -517,16 +569,24 @@ class TrackChart(wx.Panel):
                 self.y_max = np.max(nref_y) + int(0.1 * np.max(nref_y))
 
             self.track_axes['spots'].set_xlim(self.x_min, self.x_max)
-            self.track_axes['spots'].set_xticklabels([])
-            self.track_axes['spots'].set_ylim(0, self.y_max)
+            if self.use_resolution:
+                self.track_axes['spots'].set_ylim(0, 1.1*self.sdata.max())
+            else:
+                self.track_axes['spots'].set_xticklabels([])
+                self.track_axes['spots'].set_ylim(0, 1.1*self.sdata.max())
+                #self.track_axes['spots'].set_ylim(0, self.y_max)
+
             self.track_axes['quality'].set_xlim(self.x_min,self.x_max)
             self.track_axes['quality'].set_xticklabels([])
+            #Keep this way of setting y-limit, since we keep double books on quality data
             self.track_axes['quality'].set_ylim(0, 1.1*self.qdata.max())
             self.track_axes['resolution'].set_xlim(self.x_min,self.x_max)
             yticks = [0,0.1,0.25,0.5,0.8]
             ytick_labels = ["Inf","10","4","2","1.25"]
             self.track_axes['resolution'].set_yticks(yticks)
             self.track_axes['resolution'].set_yticklabels(ytick_labels)
+            if self.use_resolution:
+                self.track_axes['resolution'].set_xticklabels([])
             #if self.first_time_draw:
             is_y_grid_on = any([l.get_visible() for l in self.track_axes['resolution'].yaxis.get_gridlines()])
             if not is_y_grid_on:
@@ -552,27 +612,44 @@ class TrackChart(wx.Panel):
             return
         
         # split acc/rej lists into x and y lists
+        """
         acc_x = [int(i[0]) for i in acc]
         acc_y = [int(i[1]) for i in acc]
         rej_x = [int(i[0]) for i in rej]
         rej_y = [int(i[1]) for i in rej]
-        
+        """
+        acc_x = [int(i[0]) for i in acc]
+        acc_y = [float(i[1]) for i in acc]
+        rej_x = [int(i[0]) for i in rej]
+        rej_y = [float(i[1]) for i in rej]        
+
         # update plot data
         
         if acc_x:
-            self.acc_plot['spots'].set_xdata(acc_x)
-            self.acc_plot['spots'].set_ydata(acc_y)
+            if self.use_resolution:
+                self.acc_plot['resolution'].set_xdata(acc_x)
+                self.acc_plot['resolution'].set_ydata(acc_y)
+            else:
+                self.acc_plot['quality'].set_xdata(acc_x)
+                self.acc_plot['quality'].set_ydata(acc_y)                            
         if rej_x:
-            self.rej_plot['spots'].set_xdata(rej_x)
-            self.rej_plot['spots'].set_ydata(rej_y)
+            if self.use_resolution:
+                self.rej_plot['resolution'].set_xdata(rej_x)
+                self.rej_plot['resolution'].set_ydata(rej_y)
+            else:
+                self.rej_plot['quality'].set_xdata(rej_x)
+                self.rej_plot['quality'].set_ydata(rej_y)                
         #Always update the other plots regardless of the 
         #thresholded populations above
-        self.acc_plot['quality'].set_xdata(nref_x)
-        self.acc_plot['quality'].set_ydata(self.qdata)
-        self.acc_plot['resolution'].set_xdata(nref_x)
-        #Add a small number in denominator to avoid potential divison by zero
-        self.acc_plot['resolution'].set_ydata( 1./(0.01+self.rdata) )
-
+        self.acc_plot['spots'].set_xdata(nref_x)
+        self.acc_plot['spots'].set_ydata(self.sdata)
+        if self.use_resolution:
+            self.acc_plot['quality'].set_xdata(nref_x)
+            self.acc_plot['quality'].set_ydata(self.qdata)
+        else:
+            self.acc_plot['resolution'].set_xdata(nref_x)
+            #Add a small number in denominator to avoid potential divison by zero
+            self.acc_plot['resolution'].set_ydata( 1./(0.01+self.rdata) )
 
 
         # plot indexed
@@ -619,10 +696,16 @@ class TrackChart(wx.Panel):
             self._update_canvas(self.track_canvas)
 
         # Draw extended plots
-        self.track_axes['spots'].draw_artist(self.acc_plot['spots'])
-        self.track_axes['spots'].draw_artist(self.rej_plot['spots'])
-        self.track_axes['quality'].draw_artist(self.acc_plot['quality'])
-        self.track_axes['resolution'].draw_artist(self.acc_plot['resolution'])
+        if self.use_resolution:
+            self.track_axes['resolution'].draw_artist(self.acc_plot['resolution'])
+            self.track_axes['resolution'].draw_artist(self.rej_plot['resolution'])
+            self.track_axes['quality'].draw_artist(self.acc_plot['quality'])
+            self.track_axes['spots'].draw_artist(self.acc_plot['spots'])        
+        else:
+            self.track_axes['quality'].draw_artist(self.acc_plot['quality'])
+            self.track_axes['quality'].draw_artist(self.rej_plot['quality'])
+            self.track_axes['spots'].draw_artist(self.acc_plot['spots'])
+            self.track_axes['resolution'].draw_artist(self.acc_plot['resolution'])            
 
         # If zoomed update navigation tools
         if self.chart_range:
@@ -662,7 +745,7 @@ class TrackChart(wx.Panel):
 
 
 class TrackerPanel(wx.Panel):
-    def __init__(self, parent, main_window, run_number):
+    def __init__(self, parent, main_window, run_number, use_resolution=False):
         wx.Panel.__init__(self, parent=parent)
         self.parent = parent
         self.main_window = main_window
@@ -671,6 +754,7 @@ class TrackerPanel(wx.Panel):
         self.all_data = []
         self.new_data = []
         self.run_number = run_number
+        self.use_resolution = use_resolution
         #Sample ID
         self.sample_id = "None"
         self.run_no = "1"
@@ -740,12 +824,20 @@ class TrackerPanel(wx.Panel):
         self.graph_sizer = wx.GridBagSizer(5, 5)
 
         self.chart_zoom = ZoomCtrl(self.graph_panel, main_window)
-        self.chart = TrackChart(self.graph_panel, main_window=self.main_window)
+        self.chart = TrackChart(self.graph_panel, main_window=self.main_window,
+                                use_resolution=self.use_resolution)
+        
+        if self.use_resolution:            
+            label_txt="Min. Resolution"            
+            ctrl_value_int=4            
+        else:
+            label_txt="Min. Dzr Quality"
+            ctrl_value_int=10                    
         self.min_bragg = ct.SpinCtrl(
             self.graph_panel,
-            label="Min. Dzr Quality",
             ctrl_size=(100, -1),
-            ctrl_value=10,
+            label=label_txt,            
+            ctrl_value=ctrl_value_int,            
         )
 
         self.graph_sizer.Add(self.chart, flag=wx.EXPAND, pos=(0, 0), span=(1, 3))
@@ -805,6 +897,9 @@ class TrackerWindow(wx.Frame):
         #New Runs
         self.is_new_run_ongoing = False
         self.data_cache = []
+        #Pick thresholded metric
+        self.use_resolution_threshold = True
+
 
         # initialize dictionary of tracker panels
         self.track_panels = {}
@@ -860,10 +955,10 @@ class TrackerWindow(wx.Frame):
         stop_bmp = find_icon("stop", size=32)
         self.tb_btn_stop = self.toolbar.AddTool(
             toolId=wx.ID_ANY,
-            label="Debug",
+            label="Clear Tabs",
             bitmap=stop_bmp,
             kind=wx.ITEM_NORMAL,
-            shortHelp="Debug Trigger Button",
+            shortHelp="Clear Tabs Trigger Button",
         )
 
         # Quit button
@@ -909,6 +1004,14 @@ class TrackerWindow(wx.Frame):
         port = blconfig[selstring]['port']
         self.tb_ctrl_host.GetControl().SetValue(host)
         self.tb_ctrl_port.GetControl().SetValue(port)
+
+        #Pick thresholded metric
+        use_resolution_str = blconfig[selstring]['use_resolution_threshold']        
+        use_resolution = False
+        if use_resolution_str == "True":
+            use_resolution = True
+        print("Beamline param use_resolution {}, type {}".format(use_resolution,type(use_resolution)))
+        self.use_resolution_threshold = use_resolution
 
 
     def onMinBragg(self, e):
@@ -964,7 +1067,7 @@ class TrackerWindow(wx.Frame):
             print("Exception: TrackerWindow: self.tracker_panel.save_chart_data() failed")
             pass
         self.tracker_panel = TrackerPanel(
-            self.track_nb, main_window=self, run_number=run_no
+            self.track_nb, main_window=self, run_number=run_no, use_resolution=self.use_resolution_threshold
         )
         self.track_panels[run_no] = self.tracker_panel
         self.track_nb.AddPage(self.tracker_panel, panel_title, select=True)
@@ -1122,7 +1225,7 @@ class TrackerWindow(wx.Frame):
 
 
     def onStop(self, e):
-        print("Debug Button Event!!")
+        print("Clear Button Event!!")
         #Debug button removes all but the active tab.
         self.reset_tabs()
 
