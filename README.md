@@ -8,13 +8,18 @@
 
 This is an Interceptor,  https://github.com/ssrl-px/interceptor,  fork for experimental modifications. The purpose is to adapt the code for Max IV,  www.maxiv.lu.se, purposes. 
 
-It would be interesting to
+In this project, only the GUI part has been isolated and adapted to present Dozor spotfinding quality metrics. Much has been
+removed from the original code, and this repository is much easier to install in a Conda environment. 
+The simulator/ directory contains python scripts that can be used to feed the GUI with fake test data for standalone
+evaluation and debugging. 
 
-- Keep the original functionality intact
-- Modify the package for the possiblility  stand-alone installation
-- Add possibility to use Dozor spotfinding. The Dozor source is not completely public, but the python bindings to a compiled binary should be ok to publish. For evaluation purposes one could use a mockup Dozor binary to demonstrate the concept. 
-- Modify the test GUI for presentation of Dozor image quality indicators. 
-- Test if it is feasible to forward collected spot coordinates to the ADXV viewer, https://www.scripps.edu/tainer/arvai/adxv/adxv_1.9.10/AdxvUserManual_v1.1.pdf . The manual describes a socket interface, which could be a way to integrate a viewer already well-known to users.
+Some notes on the code:
+
+- GUI modified for Dozor spotfinding metrics (number of spots, quality, and resolution)
+- The update frequency of the graphics is intentionally set at 1 Hz (configurable). From what I undertand the ZMQ data collection loop and the GUI shares the same thread, so it is important to avoid starving the execution with excessive GUI updates. To improve refresh rates, probably a dual process design with a inter-process queue is a relatively simple solution. 
+- If a run tab collects large amount of points, the plot will only show the last 25k points in a moving windows. This is configurable.
+- The hitrate and thresholding can be done on either quality or resolution metrics. Use the "hve (resolution)" and "hve (quality)" beamline tabs to evaluate this.
+- There is a callback function implemented triggered by clicking a point in the first subplot. This could be used to view image details in an external program. The ADXV viewer, https://www.scripps.edu/tainer/arvai/adxv/adxv_1.9.10/AdxvUserManual_v1.1.pdf , fits this use-case. The manual describes a socket interface, which is a way to integrate a viewer already well-known to users.
 
 aleksander.cehovin@maxiv.lu.se
 
