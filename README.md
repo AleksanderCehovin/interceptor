@@ -20,6 +20,7 @@ Some notes on the code:
 - If a run tab collects large amount of points, the plot will only show the last 25k points in a moving windows. This is configurable.
 - The hitrate and thresholding can be done on either quality or resolution metrics. Use the "hve (resolution)" and "hve (quality)" beamline tabs to evaluate this.
 - There is a callback function implemented triggered by clicking a point in the first subplot. This could be used to view image details in an external program. The ADXV viewer, https://www.scripps.edu/tainer/arvai/adxv/adxv_1.9.10/AdxvUserManual_v1.1.pdf , fits this use-case. The manual describes a socket interface, which is a way to integrate a viewer already well-known to users.
+- In some scenarios many tabs can be created. The "Clear Tabs" button removas all but the active tab.
 
 aleksander.cehovin@maxiv.lu.se
 
