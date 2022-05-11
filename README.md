@@ -60,8 +60,7 @@ The interceptor GUI is now available as "intxr.gui"
 
 ## Simulator
 
-There is a simulation folder where two simple scripts can be used to generate the data-stream
-the interceptor GUI relies upon as data input.
+There is a simulation folder where two simple scripts can be used to generate and test the data-stream the interceptor GUI relies upon as data input.
 
 ### Simulation Data Examples
 
