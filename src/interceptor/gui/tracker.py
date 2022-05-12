@@ -480,7 +480,10 @@ class TrackChart(wx.Panel):
         min_bragg = self.main_window.tracker_panel.min_bragg.ctr.GetValue()
         if self.use_resolution:
             #Resolution thresholds are inverted
-            min_bragg = 1/min_bragg
+            if min_bragg > 0:
+                min_bragg = 1/min_bragg
+            else:
+                min_bragg = 50
 
         # append new data (if available) to data lists
         if new_data:
