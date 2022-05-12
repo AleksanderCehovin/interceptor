@@ -592,6 +592,10 @@ class TrackChart(wx.Panel):
             if not is_y_grid_on:
                 # Toggles horizontal help lines. Only need one call, but gets reset sometimes.
                 self.track_axes['resolution'].yaxis.grid(which="major",color='k',linestyle=':',linewidth=1)             
+            #Not clear why this bragg line set needs to be done in the resolution case, but the line is not
+            #visible otherwise.
+            if self.use_resolution:
+                self.bragg_line.set_ydata(min_bragg)
             #self.track_axes['resolution'].set_ylim(0,1)
         else:
             self.x_min = -1
