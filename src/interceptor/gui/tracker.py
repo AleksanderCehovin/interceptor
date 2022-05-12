@@ -833,7 +833,7 @@ class TrackerPanel(wx.Panel):
         
         if self.use_resolution:            
             label_txt="Min. Resolution"            
-            ctrl_value_int=4            
+            ctrl_value_int=3            
         else:
             label_txt="Min. Dzr Quality"
             ctrl_value_int=10                    
