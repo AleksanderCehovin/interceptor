@@ -116,7 +116,7 @@ class SpinCtrl(CtrlBase):
         ctrl_max=999999,
         ctrl_min=0,
         ctrl_step=1,
-        ctrl_digits=0,
+        ctrl_digits = 1,
     ):
 
         CtrlBase.__init__(self, parent=parent, label_style=label_style)
@@ -176,6 +176,5 @@ class SpinCtrl(CtrlBase):
 
     def reset_default(self):
         self.ctr.SetValue(int(self.value))
-
 
 # ---end
