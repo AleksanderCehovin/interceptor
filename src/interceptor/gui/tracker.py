@@ -836,15 +836,18 @@ class TrackerPanel(wx.Panel):
         
         if self.use_resolution:            
             label_txt="Min. Resolution"            
-            ctrl_value_int=3            
+            ctrl_value_int=3
+            ctrl_step_val = 0.1
         else:
             label_txt="Min. Dzr Quality"
-            ctrl_value_int=10                    
+            ctrl_value_int=10
+            ctrl_step_val = 1
         self.min_bragg = ct.SpinCtrl(
             self.graph_panel,
             ctrl_size=(100, -1),
             label=label_txt,            
-            ctrl_value=ctrl_value_int,            
+            ctrl_value=ctrl_value_int,
+            ctrl_step=ctrl_step_val,
         )
 
         self.graph_sizer.Add(self.chart, flag=wx.EXPAND, pos=(0, 0), span=(1, 3))
