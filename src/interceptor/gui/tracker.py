@@ -47,6 +47,13 @@ MAX_TAB_TEXT_LENGTH = 30
 UI_TIMER_PERIOD_MS = 1000
 
 
+#Plot restart threshold. If a new frame number is lower by
+#more than this threshold, the current plot will reset and
+#delete old data. Sometimes this can happen in long data collections
+#that are batched. Every new batch re-starts the frame indexing
+MAX_FRAME_NUMBER_DEVIATION = 1500
+
+
 class EvtChartZoom(wx.PyCommandEvent):
     """ Send event when any zoom event happens  """
 
@@ -883,6 +890,8 @@ class TrackerPanel(wx.Panel):
         if reset:
             self.chart.reset_chart()
             self.chart.draw_bragg_line(False)
+            # Remove any old data in plot
+            self.all_data = []
             self.chart.draw_plot(new_data=self.all_data)
 
         #print("update_plot all_data {}".format(len(self.all_data)))
@@ -909,7 +918,8 @@ class TrackerWindow(wx.Frame):
         self.data_cache = []
         #Pick thresholded metric
         self.use_resolution_threshold = True
-
+        #Keep track of highest received frame number
+        self.max_received_frame_number = 0
 
         # initialize dictionary of tracker panels
         self.track_panels = {}
@@ -1156,7 +1166,9 @@ class TrackerWindow(wx.Frame):
         new_data_dict = {}
         run_no_dict = {}
         sample_id_dict = {}
-        
+        #Trigger a plot reset if abnormal jump in frame number is detected
+        reset_plot = False
+
         print("onCollectorInfo\n")
 
         #The GUI can be overrun by data during tab switches. This should save incoming
@@ -1203,6 +1215,13 @@ class TrackerWindow(wx.Frame):
                         )
                     )
                 else:
+                    frame_number = int(info["frame_idx"])
+                    if frame_number > self.max_received_frame_number:
+                        self.max_received_frame_number = frame_number
+                    if self.max_received_frame_number - frame_number  > MAX_FRAME_NUMBER_DEVIATION:
+                        print("Plot Reset Detected")
+                        self.max_received_frame_number = 0
+                        reset_plot = True
                     new_data_dict[tab_id] = [
                         (
                             info["frame_idx"],
@@ -1225,7 +1244,7 @@ class TrackerWindow(wx.Frame):
                     print("ERROR, track_panels changed")
 
         # update current plot
-        self.tracker_panel.update_plot()
+        self.tracker_panel.update_plot(reset_plot)
 
     def onQuit(self, e):
         self.Close()
