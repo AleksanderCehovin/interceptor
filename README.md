@@ -37,7 +37,7 @@ Preliminary notes on simplified install of decoupled GUI
 
 - Install miniconda with python 3.
 - Create a conda environment, "interceptor_gui", for the install
-> conda create --name interceptor_gui python=3.8
+> conda create --name interceptor_gui python=3.7
 - Activate the clean environment
 > conda activate interceptor_gui
 - To speed-up the installation install the following packages with conda:
