@@ -36,6 +36,9 @@ Example from datacollection at Biomax Max IV by Monika Bjelcic
 Preliminary notes on simplified install of decoupled GUI
 
 - Install miniconda with python 3.
+- I have been using the conda-forge channel for my installations:
+> conda config --add channels conda-forge
+> conda config --set channel-priority strict
 - Create a conda environment, "interceptor_gui", for the install
 > conda create --name interceptor_gui python=3.7
 - Activate the clean environment
