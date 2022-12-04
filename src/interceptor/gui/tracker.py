@@ -643,35 +643,26 @@ class TrackChart(wx.Panel):
         
         if acc_x:
             if self.use_resolution:
-                self.acc_plot['resolution'].set_xdata(acc_x)
-                self.acc_plot['resolution'].set_ydata(acc_y)
+                self.acc_plot['resolution'].set_data(acc_x, acc_y)
             else:
-                self.acc_plot['quality'].set_xdata(acc_x)
-                self.acc_plot['quality'].set_ydata(acc_y)                            
+                self.acc_plot['quality'].set_data(acc_x, acc_y)
         if rej_x:
             if self.use_resolution:
-                self.rej_plot['resolution'].set_xdata(rej_x)
-                self.rej_plot['resolution'].set_ydata(rej_y)
+                self.rej_plot['resolution'].set_data(rej_x, rej_y)
             else:
-                self.rej_plot['quality'].set_xdata(rej_x)
-                self.rej_plot['quality'].set_ydata(rej_y)                
+                self.rej_plot['quality'].set_data(rej_x, rej_y)
         #Always update the other plots regardless of the 
         #thresholded populations above
-        self.acc_plot['spots'].set_xdata(nref_x)
-        self.acc_plot['spots'].set_ydata(self.sdata)
+        self.acc_plot['spots'].set_data(nref_x, self.sdata)
         if self.use_resolution:
-            self.acc_plot['quality'].set_xdata(nref_x)
-            self.acc_plot['quality'].set_ydata(self.qdata)
+            self.acc_plot['quality'].set_data(nref_x, self.qdata)
         else:
-            self.acc_plot['resolution'].set_xdata(nref_x)
-            #Add a small number in denominator to avoid potential divison by zero
-            self.acc_plot['resolution'].set_ydata( 1./(0.01+self.rdata) )
-
+            #Add a small number in denominator to avoid potential divison by zero            
+            self.acc_plot['resolution'].set_data(nref_x, 1./(0.01+self.rdata) )
 
         # plot indexed
         if new_i is not None:
-            self.idx_plot.set_xdata(nref_x)
-            self.idx_plot.set_ydata(nref_i)
+            self.idx_plot.set_data(nref_x, nref_i)
             idx_count = "{}".format(len(nref_i[~np.isnan(nref_i)]))
             self.main_window.tracker_panel.idx_count_txt.SetLabel(idx_count)
 
