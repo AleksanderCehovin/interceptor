@@ -221,9 +221,63 @@ def clear_subplots(subplot_instance):
     subplot_instance.clear()
     subplot_instance.patch.set_visible(False)
 
+
+class TrackImages(wx.Panel):
+    def __init__(self, parent, main_window):
+        wx.Panel.__init__(self, parent, size=(40, 40))
+        self.main_window = main_window
+        self.parent = parent
+
+        self.main_box = wx.StaticBox(self, label="Preview Images")
+        self.main_fig_sizer = wx.StaticBoxSizer(self.main_box, wx.VERTICAL)
+        self.SetSizer(self.main_fig_sizer)
+
+        self.track_figure = Figure()
+        self.track_axes = {}
+        self.track_axes['main'] = self.track_figure.add_subplot(111)
+        #set_subplot_labels(self.track_axes['main'],"Preview Frame","Pixel Intensity")
+        self.track_figure.set_tight_layout(True)
+
+        self.track_canvas = FigureCanvas(self, -1, self.track_figure)
+
+        self.track_axes['main'].patch.set_visible(False)
+
+        self.main_fig_sizer.Add(self.track_canvas,1,wx.EXPAND)
+
+
+        self.reset_chart()
+
+    def reset_chart(self):
+        self.track_figure.patch.set_visible(False)
+        clear_subplots(self.track_axes['main'])
+        #set_subplot_labels(self.track_axes['main'],"Preview Frame","Pixel Intensity")
+        self.image_plot = self.track_axes['main'].imshow( np.random.rand(1000,1000))
+        self.track_axes['main'].set_autoscaley_on(True)
+        self.track_figure.patch.set_visible(True)
+        self._update_canvas(canvas=self.track_canvas)
+
+
+    def _update_canvas(self, canvas, draw_idle=True):
+        """ Update a canvas (passed as arg)
+    :param canvas: A canvas to be updated via draw_idle
+    """
+        # Draw_idle is useful for regular updating of the chart; straight-up draw
+        # without flush_events() will have to be used when buttons are clicked to
+        # avoid recursive calling of wxYield
+        if draw_idle:
+            canvas.draw_idle()
+            try:
+                canvas.flush_events()
+            except (NotImplementedError, AssertionError):
+                pass
+        else:
+            canvas.draw()
+        canvas.Refresh()
+
+
 class TrackChart(wx.Panel):
     def __init__(self, parent, main_window, use_resolution=False):
-        wx.Panel.__init__(self, parent, size=(100, 100))
+        wx.Panel.__init__(self, parent, size=(40, 40))
         self.main_window = main_window
         self.parent = parent
         self.zoom_ctrl = self.parent.GetParent().chart_zoom
@@ -628,12 +682,6 @@ class TrackChart(wx.Panel):
             return
         
         # split acc/rej lists into x and y lists
-        """
-        acc_x = [int(i[0]) for i in acc]
-        acc_y = [int(i[1]) for i in acc]
-        rej_x = [int(i[0]) for i in rej]
-        rej_y = [int(i[1]) for i in rej]
-        """
         acc_x = [int(i[0]) for i in acc]
         acc_y = [float(i[1]) for i in acc]
         rej_x = [int(i[0]) for i in rej]
@@ -828,7 +876,7 @@ class TrackerPanel(wx.Panel):
 
         # Put in chart
         self.graph_panel = wx.Panel(self)
-        self.graph_sizer = wx.GridBagSizer(5, 5)
+        self.graph_sizer = wx.GridBagSizer(2, 2)
 
         self.chart_zoom = ZoomCtrl(self.graph_panel, main_window)
         self.chart = TrackChart(self.graph_panel, main_window=self.main_window,
@@ -850,13 +898,40 @@ class TrackerPanel(wx.Panel):
             ctrl_step=ctrl_step_val,
         )
 
-        self.graph_sizer.Add(self.chart, flag=wx.EXPAND, pos=(0, 0), span=(1, 3))
+        self.graph_sizer.Add(self.chart, flag=wx.EXPAND, pos=(0, 0), span=(1, 2))
         self.graph_sizer.Add(self.min_bragg, flag=wx.ALIGN_LEFT, pos=(1, 0))
         self.graph_sizer.Add(self.chart_zoom, flag=wx.ALIGN_CENTER, pos=(1, 1))
 
         self.graph_sizer.AddGrowableRow(0)
-        self.graph_sizer.AddGrowableCol(1)
+        self.graph_sizer.AddGrowableCol(0)
         self.graph_panel.SetSizer(self.graph_sizer)
+
+        #Image Panel
+        self.image_panel = wx.Panel(self)
+        self.image_sizer = wx.GridBagSizer(2,2)
+        self.image_chart = TrackImages(self.image_panel, main_window=self.main_window)
+
+        self.radio_box = wx.RadioBox(self.image_panel,
+                                     label= "Preview Options",
+                                     pos=(0,0),
+                                     choices=["Full Preview", "Raw Image", "Debug", "Option 1", "Option 2"],
+                                     style = wx.RA_SPECIFY_ROWS)
+        self.image_slider = wx.Slider(self.image_panel,
+                                      maxValue=2000,
+                                      name="Image Intensity Threshold",
+                                      style=wx.SL_MIN_MAX_LABELS)
+
+
+        self.image_sizer.Add(self.image_chart, flag=wx.EXPAND, pos=(0,0), span=(1,1))
+        self.image_sizer.Add(self.radio_box, flag=wx.EXPAND, pos=(0,1))
+        self.image_sizer.Add(self.image_slider, flag=wx.EXPAND, pos=(1,0))
+        self.image_sizer.AddGrowableRow(0)
+        self.image_sizer.AddGrowableCol(0)
+        self.image_sizer.AddGrowableCol(1)
+
+        self.image_panel.SetSizer(self.image_sizer)
+
+
 
         # Add all to main sizer
         self.main_sizer.Add(
@@ -865,8 +940,13 @@ class TrackerPanel(wx.Panel):
         self.main_sizer.Add(
             self.graph_panel, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=5
         )
+        #Add Image panel
+        self.main_sizer.Add(
+            self.image_panel, pos=(2,0), flag=wx.EXPAND | wx.ALL, border=5
+        )
         self.main_sizer.AddGrowableCol(0)
         self.main_sizer.AddGrowableRow(1)
+        self.main_sizer.AddGrowableRow(2)
         self.SetSizer(self.main_sizer)
 
     #ADDITION
