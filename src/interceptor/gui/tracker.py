@@ -447,6 +447,8 @@ class TrackChart(wx.Panel):
             rectprops=dict(alpha=0.5, ls=":", fc="#ffffd4", ec="#8c2d04"),
         )
         self.zoom_span.set_active(True)
+        #This line fixes overlapping rendering on Windows
+        self.track_figure.patch.set_visible(True)
         self._update_canvas(canvas=self.track_canvas)
 
     def draw_bragg_line(self,draw_plot=True):
