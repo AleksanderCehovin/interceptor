@@ -76,3 +76,9 @@ Test data with GUI using quality for hit rate calculations
 Test data with GUI using resolution for hit rate calculations
 
 ![Simulation with resolutin threshold](doc/images/test_gui_resolution.png)
+
+
+## TODO
+
+- Split datacollection and GUI plotting into two threads. How does this fit with the Python GIL lock? Do we need two processes?
+- When actively resizing window with mouse drag, the tab switches between runs does not work properly.
