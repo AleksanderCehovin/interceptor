@@ -232,7 +232,7 @@ class TrackImages(wx.Panel):
         self.main_fig_sizer = wx.StaticBoxSizer(self.main_box, wx.VERTICAL)
         self.SetSizer(self.main_fig_sizer)
 
-        self.track_figure = Figure()
+        self.track_figure = Figure(figsize=[3,3], tight_layout=True)
         self.track_axes = {}
         self.track_axes['main'] = self.track_figure.add_subplot(111)
         #set_subplot_labels(self.track_axes['main'],"Preview Frame","Pixel Intensity")
@@ -291,7 +291,7 @@ class TrackChart(wx.Panel):
         self.SetSizer(self.main_fig_sizer)
 
         self.resize_counter = 0 # ALEK
-        self.track_figure = Figure()
+        self.track_figure = Figure(figsize=[12,4])
         self.track_axes = {}
 
         #Presentation depends on whether thresholding and hitrate is based 
@@ -814,7 +814,7 @@ class TrackerPanel(wx.Panel):
         self.sample_id = "None"
         self.run_no = "1"
 
-        self.main_sizer = wx.GridBagSizer(10, 10)
+        self.main_sizer = wx.GridBagSizer(4, 4)
 
         # Status box
         self.info_panel = wx.Panel(self)
@@ -908,11 +908,11 @@ class TrackerPanel(wx.Panel):
 
         #Image Panel
         self.image_panel = wx.Panel(self)
-        self.image_sizer = wx.GridBagSizer(2,2)
+        self.image_sizer = wx.GridBagSizer(3,3)
         self.image_chart = TrackImages(self.image_panel, main_window=self.main_window)
 
         self.radio_box = wx.RadioBox(self.image_panel,
-                                     label= "Preview Options",
+                                     label= "Pipeline Panel",
                                      pos=(0,0),
                                      choices=["Full Preview", "Raw Image", "Debug", "Option 1", "Option 2"],
                                      style = wx.RA_SPECIFY_ROWS)
@@ -922,12 +922,13 @@ class TrackerPanel(wx.Panel):
                                       style=wx.SL_MIN_MAX_LABELS)
 
 
-        self.image_sizer.Add(self.image_chart, flag=wx.EXPAND, pos=(0,0), span=(1,1))
-        self.image_sizer.Add(self.radio_box, flag=wx.EXPAND, pos=(0,1))
-        self.image_sizer.Add(self.image_slider, flag=wx.EXPAND, pos=(1,0))
+        self.image_sizer.Add(self.image_chart, flag=wx.EXPAND | wx.ALL, pos=(0,0), span=(1,1))
+        self.image_sizer.Add(self.radio_box, flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,2))
+        self.image_sizer.Add(self.image_slider, flag=wx.EXPAND | wx.ALL, pos=(1,0))
         self.image_sizer.AddGrowableRow(0)
         self.image_sizer.AddGrowableCol(0)
         self.image_sizer.AddGrowableCol(1)
+        self.image_sizer.AddGrowableCol(2)
 
         self.image_panel.SetSizer(self.image_sizer)
 
@@ -938,15 +939,16 @@ class TrackerPanel(wx.Panel):
             self.info_panel, pos=(0, 0), flag=wx.EXPAND | wx.ALL, border=5
         )
         self.main_sizer.Add(
-            self.graph_panel, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=5
+            self.graph_panel, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=5, span=(2,2)
         )
         #Add Image panel
         self.main_sizer.Add(
-            self.image_panel, pos=(2,0), flag=wx.EXPAND | wx.ALL, border=5
+            self.image_panel, pos=(3,0), flag=wx.EXPAND | wx.ALL, border=5
         )
         self.main_sizer.AddGrowableCol(0)
         self.main_sizer.AddGrowableRow(1)
         self.main_sizer.AddGrowableRow(2)
+        self.main_sizer.AddGrowableRow(3)
         self.SetSizer(self.main_sizer)
 
     #ADDITION
