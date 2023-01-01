@@ -9,4 +9,3 @@ intxr.gui = interceptor.command_line.ui_run:entry_point
 intxr.connect = intxr.connect
 intxr.connect_mpi = intxr.connect_mpi
 intxr.gui = intxr.gui
-

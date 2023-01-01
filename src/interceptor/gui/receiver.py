@@ -40,6 +40,9 @@ class Receiver(Thread):
         #Bookmark keeps track of what part of the cache is yet to be
         #forwarded to the GUI.        
         self.bookmark = 0
+        #Timestamps to sanitycheck low-frequent reports
+        self.last_monitor_report_time = time.time()
+        self.last_preview_time = time.time()
 
         #Pre-allocation of data cache at object creation.
         for i in range(0,SIZE_DATA_CACHE):
@@ -83,7 +86,7 @@ class Receiver(Thread):
                 if not USE_PULL_PUSH:
                     data_string = data_string[(len(MONITOR_TOPIC_TOKEN)+1):]
             except Exception as exp:
-                time.sleep(1)
+                time.sleep(0.25)
             else:
                 run_no = data_string.split('run ')[1].split(' frame')[0]
                 frame_idx = data_string.split('frame ')[1].split(' result')[0]
@@ -143,6 +146,24 @@ class Receiver(Thread):
                 self.all_info_cursor = 0
                 self.bookmark = 0
 
+        #GUI Extensions
+        self.poll_monitor_report()
+        self.poll_preview_image()
+
+    def poll_monitor_report(self):
+        timestamp = time.time()
+        if timestamp - self.last_monitor_report_time > 3.0:
+            evt = MonitorReportDone(tp_EVT_PIPELINE_STATUS, wx.ID_ANY)
+            wx.PostEvent(self.parent, evt)
+            self.last_monitor_report_time = timestamp
+
+    def poll_preview_image(self):
+        timestamp = time.time()
+        if timestamp - self.last_preview_time > 5.0:
+            evt = PreviewImageDone(tp_EVT_PREVIEW_IMAGE, wx.ID_ANY)
+            wx.PostEvent(self.parent, evt)
+            self.last_preview_time = timestamp
+
     def send_to_gui(self, info):
         evt = SpotFinderOneDone(tp_EVT_SPFDONE, -1, info=info)
         wx.PostEvent(self.parent, evt)
@@ -151,8 +172,21 @@ class Receiver(Thread):
         self.stop = True
 
 
+"""
+Event classes below are used to signal events.
+Any available data is transported within the event
+by supplying it as an argument to class constructor
+"""
+
+# Spotfinder batch of new data is ready.
 tp_EVT_SPFDONE = wx.NewEventType()
 EVT_SPFDONE = wx.PyEventBinder(tp_EVT_SPFDONE, 1)
+# Lower frequency monitoring data is ready.
+tp_EVT_PIPELINE_STATUS = wx.NewEventType()
+EVT_PIPELINESTATUS = wx.PyEventBinder(tp_EVT_PIPELINE_STATUS, 1)
+# Low frequencey preview image is ready.
+tp_EVT_PREVIEW_IMAGE = wx.NewEventType()
+EVT_PREVIEWIMAGE = wx.PyEventBinder(tp_EVT_PREVIEW_IMAGE, 1)
 
 
 class SpotFinderOneDone(wx.PyCommandEvent):
@@ -164,3 +198,22 @@ class SpotFinderOneDone(wx.PyCommandEvent):
 
     def GetValue(self):
         return self.info
+
+class MonitorReportDone(wx.PyCommandEvent):
+    """ Pipeline report status available  """
+
+    def __init__(self, etype, eid, report=None):
+        wx.PyCommandEvent.__init__(self, etype, eid)
+        self.report = report
+
+    def GetValue(self):
+        return self.report
+
+class PreviewImageDone(wx.PyCommandEvent):
+    """ Preview Image available """
+    def __init__(self, etype, eid, image=None):
+        wx.PyCommandEvent.__init__(self, etype, eid)
+        self.image = image
+
+    def GetValue(self):
+        return self.image

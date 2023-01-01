@@ -224,7 +224,7 @@ def clear_subplots(subplot_instance):
 
 class TrackImages(wx.Panel):
     def __init__(self, parent, main_window):
-        wx.Panel.__init__(self, parent, size=(40, 40))
+        wx.Panel.__init__(self, parent, size=wx.Size(350, 350))
         self.main_window = main_window
         self.parent = parent
 
@@ -232,7 +232,7 @@ class TrackImages(wx.Panel):
         self.main_fig_sizer = wx.StaticBoxSizer(self.main_box, wx.VERTICAL)
         self.SetSizer(self.main_fig_sizer)
 
-        self.track_figure = Figure(figsize=[3,3], tight_layout=True)
+        self.track_figure = Figure(figsize=[2,2], tight_layout=True)
         self.track_axes = {}
         self.track_axes['main'] = self.track_figure.add_subplot(111)
         #set_subplot_labels(self.track_axes['main'],"Preview Frame","Pixel Intensity")
@@ -251,7 +251,8 @@ class TrackImages(wx.Panel):
         self.track_figure.patch.set_visible(False)
         clear_subplots(self.track_axes['main'])
         #set_subplot_labels(self.track_axes['main'],"Preview Frame","Pixel Intensity")
-        self.image_plot = self.track_axes['main'].imshow( np.random.rand(1000,1000))
+        self.image_plot = self.track_axes['main'].imshow( 100*np.random.rand(100,100))
+        self.track_axes['main'].axis('off')
         self.track_axes['main'].set_autoscaley_on(True)
         self.track_figure.patch.set_visible(True)
         self._update_canvas(canvas=self.track_canvas)
@@ -822,6 +823,11 @@ class TrackerPanel(wx.Panel):
         self.info_sizer.AddGrowableCol(4)
         self.info_panel.SetSizer(self.info_sizer)
 
+        #TODO: All these static boxe constructions to show string should be 
+        #      generated in some kind of function to avoid all the code 
+        #      repetition. By now there are so many of them this would
+        #      declutter things alot and make it easier to implement optionality
+        #      in the GUI between basic and extended versions.
         self.count_box = wx.StaticBox(self.info_panel, label="Hits")
         self.count_box_sizer = wx.StaticBoxSizer(self.count_box, wx.HORIZONTAL)
         self.count_txt = wx.StaticText(self.info_panel, label="")
@@ -908,26 +914,96 @@ class TrackerPanel(wx.Panel):
 
         #Image Panel
         self.image_panel = wx.Panel(self)
-        self.image_sizer = wx.GridBagSizer(3,3)
+        self.image_sizer = wx.GridBagSizer(5,3)
         self.image_chart = TrackImages(self.image_panel, main_window=self.main_window)
 
+        """
         self.radio_box = wx.RadioBox(self.image_panel,
                                      label= "Pipeline Panel",
                                      pos=(0,0),
                                      choices=["Full Preview", "Raw Image", "Debug", "Option 1", "Option 2"],
                                      style = wx.RA_SPECIFY_ROWS)
+        """
         self.image_slider = wx.Slider(self.image_panel,
                                       maxValue=2000,
                                       name="Image Intensity Threshold",
-                                      style=wx.SL_MIN_MAX_LABELS)
+                                      style=wx.SL_MIN_MAX_LABELS,
+                                      size=wx.Size(400,50) )
+
+        #Adding Pipeline Status
+        self.det_label_box = wx.StaticBox(self.image_panel, label="Detector Label")
+        self.det_label_box_sizer = wx.StaticBoxSizer(self.det_label_box, wx.HORIZONTAL)
+        self.det_label_txt = wx.StaticText(self.image_panel, label="Biomax Eiger 16M")
+        self.det_label_box_sizer.Add(self.det_label_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        self.det_ip_box = wx.StaticBox(self.image_panel, label="Detector IP")
+        self.det_ip_box_sizer = wx.StaticBoxSizer(self.det_ip_box, wx.HORIZONTAL)
+        self.det_ip_txt = wx.StaticText(self.image_panel, label="127.127.127.127:9999")
+        self.det_ip_box_sizer.Add(self.det_ip_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        self.fps_box = wx.StaticBox(self.image_panel, label="Framerate [FPS]")
+        self.fps_box_sizer = wx.StaticBoxSizer(self.fps_box, wx.HORIZONTAL)
+        self.fps_txt = wx.StaticText(self.image_panel, label="0")
+        self.fps_box_sizer.Add(self.fps_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        self.pipeline_box = wx.StaticBox(self.image_panel, label="Pipeline Status [OK/ERROR/CANCEL]")
+        self.pipeline_box_sizer = wx.StaticBoxSizer(self.pipeline_box, wx.HORIZONTAL)
+        self.pipeline_txt = wx.StaticText(self.image_panel, label="OK")
+        self.pipeline_box_sizer.Add(self.pipeline_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        self.throughput_box = wx.StaticBox(self.image_panel, label="Frame Throughput Time [ms]")
+        self.throughput_box_sizer = wx.StaticBoxSizer(self.throughput_box, wx.HORIZONTAL)
+        self.throughput_txt = wx.StaticText(self.image_panel, label="1000 +/- 50")
+        self.throughput_box_sizer.Add(self.throughput_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        self.spotfinder_box = wx.StaticBox(self.image_panel, label="Spotfinder Algorithm")
+        self.spotfinder_box_sizer = wx.StaticBoxSizer(self.spotfinder_box, wx.HORIZONTAL)
+        self.spotfinder_txt = wx.StaticText(self.image_panel, label="Dozor")
+        self.spotfinder_box_sizer.Add(self.spotfinder_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        self.indexer_box = wx.StaticBox(self.image_panel, label="Indexing Algorithm")
+        self.indexer_box_sizer = wx.StaticBoxSizer(self.indexer_box, wx.HORIZONTAL)
+        self.indexer_txt = wx.StaticText(self.image_panel, label="None")
+        self.indexer_box_sizer.Add(self.indexer_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        self.mask_box = wx.StaticBox(self.image_panel, label="Active Masking [None/Filepath]")
+        self.mask_box_sizer = wx.StaticBoxSizer(self.mask_box, wx.HORIZONTAL)
+        self.mask_txt = wx.StaticText(self.image_panel, label="None")
+        self.mask_box_sizer.Add(self.mask_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        self.slider_box = wx.StaticBox(self.image_panel, label="Preview Image Contrast Threshold")
+        self.slider_box_sizer = wx.StaticBoxSizer(self.slider_box, wx.HORIZONTAL)
+        self.slider_box_sizer.Add(self.image_slider, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
 
 
-        self.image_sizer.Add(self.image_chart, flag=wx.EXPAND | wx.ALL, pos=(0,0), span=(1,1))
-        self.image_sizer.Add(self.radio_box, flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,2))
-        self.image_sizer.Add(self.image_slider, flag=wx.EXPAND | wx.ALL, pos=(1,0))
-        self.image_sizer.AddGrowableRow(0)
-        self.image_sizer.AddGrowableCol(0)
-        self.image_sizer.AddGrowableCol(1)
+
+        font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        self.det_label_txt.SetFont(font)
+        self.det_ip_txt.SetFont(font)
+        self.fps_txt.SetFont(font)
+        self.pipeline_txt.SetFont(font)
+        self.throughput_txt.SetFont(font)
+        self.spotfinder_txt.SetFont(font)
+        self.indexer_txt.SetFont(font)
+        self.mask_txt.SetFont(font)
+
+        self.image_sizer.Add(self.image_chart, flag=wx.EXPAND | wx.ALL, pos=(0,0), span=(5,1))
+        #self.image_sizer.Add(self.radio_box, flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,2))
+        self.image_sizer.Add(self.det_label_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,1))
+        self.image_sizer.Add(self.det_ip_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(1,1), span=(1,1))
+        self.image_sizer.Add(self.fps_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(2,1), span=(1,1))
+        self.image_sizer.Add(self.throughput_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(3,1), span=(1,1))
+        self.image_sizer.Add(self.slider_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(4,1), span=(1,1))
+
+        self.image_sizer.Add(self.pipeline_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(0,2), span=(1,1))
+        self.image_sizer.Add(self.spotfinder_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(1,2), span=(1,1))
+        self.image_sizer.Add(self.indexer_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(2,2), span=(1,1))
+        self.image_sizer.Add(self.mask_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(3,2), span=(1,1))
+
+        #self.image_sizer.Add(self.image_slider, flag=wx.EXPAND | wx.ALL, pos=(4,0))
+        #self.image_sizer.AddGrowableRow(0)
+        #self.image_sizer.AddGrowableCol(0)
+        #self.image_sizer.AddGrowableCol(1)
         self.image_sizer.AddGrowableCol(2)
 
         self.image_panel.SetSizer(self.image_sizer)
@@ -943,12 +1019,12 @@ class TrackerPanel(wx.Panel):
         )
         #Add Image panel
         self.main_sizer.Add(
-            self.image_panel, pos=(3,0), flag=wx.EXPAND | wx.ALL, border=5
+            self.image_panel, pos=(3,0), flag=wx.EXPAND | wx.ALL, border=5, span=(1,1)
         )
         self.main_sizer.AddGrowableCol(0)
         self.main_sizer.AddGrowableRow(1)
         self.main_sizer.AddGrowableRow(2)
-        self.main_sizer.AddGrowableRow(3)
+        #self.main_sizer.AddGrowableRow(3)
         self.SetSizer(self.main_sizer)
 
     #ADDITION
@@ -996,9 +1072,14 @@ class TrackerWindow(wx.Frame):
         #Keep track of highest received frame number
         self.max_received_frame_number = 0
 
+        #Internal update counter
+        self.counter = 0
+
         # initialize dictionary of tracker panels
         self.track_panels = {}
         #MEMORY LEAK self.all_info = []
+        #Current Tracker Panel
+        self.tracker_panel = None
 
         # Status bar
         self.sb = TrackStatusBar(self)
@@ -1198,6 +1279,9 @@ class TrackerWindow(wx.Frame):
         self.collector = rcv.Receiver(self)
         self.Bind(rcv.EVT_SPFDONE, self.onCollectorInfo)
         self.Bind(wx.EVT_TIMER, self.collector.onUITimer, id=self.ui_timer.GetId())
+        #Extended GUI
+        self.Bind(rcv.EVT_PIPELINESTATUS, self.onMonitorStatusInfo)
+        self.Bind(rcv.EVT_PREVIEWIMAGE, self.onPreviewImageInfo)
 
     def start_zmq_collector(self):
         # clear screen / restart runs
@@ -1231,6 +1315,27 @@ class TrackerWindow(wx.Frame):
             sample_label = str(sample_string[:N])+"..."+str(sample_string[-N:])
         return sample_label+"_"+str(run_no_string)
 
+    #Extended GUI
+    def onMonitorStatusInfo(self, e):
+        print("Received Monitor Status Callback!!")
+        fps_str = str(np.random.randint(100,150))
+        throughput_str = str(np.random.randint(200,300))
+        std_str = str(np.random.randint(1,30))
+        self.tracker_panel.fps_txt.SetLabel(fps_str)
+        self.tracker_panel.throughput_txt.SetLabel(throughput_str + " +/- " + std_str)
+        shift_no = self.counter % 4
+        time_str = "-\|/"
+        self.tracker_panel.pipeline_txt.SetLabel("OK ["+time_str[shift_no]+"]")
+
+
+        self.counter += 1
+
+
+    #Extended GUI
+    def onPreviewImageInfo(self, e):
+        print("Received Preview Image Callback!!")
+        if self.tracker_panel is not None:
+            self.tracker_panel.image_chart.reset_chart()
 
     def onCollectorInfo(self, e):
         """ Occurs on every wx.PostEvent instance; updates lists of images with
