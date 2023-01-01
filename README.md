@@ -15,7 +15,8 @@ The simulator/ directory contains a python script that can be used to feed the G
 Some notes on the code:
 
 - GUI modified for Dozor spotfinding metrics (number of spots, quality, and resolution)
-- The update frequency of the graphics is intentionally set at 1 Hz (configurable). From what I undertand the ZMQ data collection loop and the GUI shares the same thread, so it is important to avoid starving the execution with excessive GUI updates. To improve refresh rates, probably a dual process design with an inter-process queue is a relatively simple solution. 
+- The update frequency of the graphics is intentionally set at 1 Hz (configurable). From what I undertand the ZMQ data collection loop is done in a
+  separate thread as the GUI, but they still work within the limitation of the Python GIL (I'm guessing). It is therefore important to avoid starving the execution with excessive GUI updates. TODO list below discusses solutions to this issue.
 - If a run tab collects large amount of points, the plot will only show the last 25k points in a moving windows. This is configurable.
 - The hitrate and thresholding can be done on either quality or resolution metrics. Use the "hve (resolution)" and "hve (quality)" beamline tabs to evaluate this.
 - There is a callback function implemented triggered by clicking a point in the first subplot. This could be used to view image details in an external program. The ADXV viewer, https://www.scripps.edu/tainer/arvai/adxv/adxv_1.9.10/AdxvUserManual_v1.1.pdf , fits this use-case. The manual describes a socket interface, which is a way to integrate a viewer already well-known to users.

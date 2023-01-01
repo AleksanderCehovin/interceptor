@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 """
-Author      : Lyubimov, A.Y.
+Author      : Lyubimov, A.Y., Aleksander Cehovin
 Created     : 03/31/2020
 Last Changed: 03/31/2020
 Description : ZMQ receiver module for Interceptor GUI
@@ -175,7 +175,8 @@ class Receiver(Thread):
 """
 Event classes below are used to signal events.
 Any available data is transported within the event
-by supplying it as an argument to class constructor
+by supplying with typically the last argument of the
+class constructor
 """
 
 # Spotfinder batch of new data is ready.
