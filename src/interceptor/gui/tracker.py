@@ -713,37 +713,37 @@ class TrackChart(wx.Panel):
         if new_i is not None:
             self.idx_plot.set_data(nref_x, nref_i)
             idx_count = "{}".format(len(nref_i[~np.isnan(nref_i)]))
-            self.main_window.tracker_panel.idx_count_txt.SetLabel(idx_count)
+            self.main_window.tracker_panel.set_gui_string('idx_count_txt',idx_count)
 
         self.Layout()
 
         # update run stats
         # hit count
         count = "{}".format(len(acc))
-        self.main_window.tracker_panel.count_txt.SetLabel(count)
+        self.main_window.tracker_panel.set_gui_string('count_txt',count)
         self.main_window.tracker_panel.info_sizer.Layout()
 
         # hit rate count
         if len(rej) == 0:
             count_rate = "{:.1f}".format(100)
         else:
-            count_rate = "{:.1f}".format(100*len(acc)/(1.0*(len(acc)+len(rej))))        
-        self.main_window.tracker_panel.count_rate_txt.SetLabel(count_rate)
+            count_rate = "{:.1f}".format(100*len(acc)/(1.0*(len(acc)+len(rej))))
+        self.main_window.tracker_panel.set_gui_string('count_rate_txt',count_rate)
 
         # indexed count
         idx_count = "{}".format(len(nref_i[~np.isnan(nref_i)]))
-        self.main_window.tracker_panel.idx_count_txt.SetLabel(idx_count)
+        self.main_window.tracker_panel.set_gui_string('idx_count_txt',idx_count)
 
         # Median resolution
         median_res = np.median(self.rdata)
         res_label = "{:.2f} Å".format(median_res)
-        self.main_window.tracker_panel.res_txt.SetLabel(res_label)
+        self.main_window.tracker_panel.set_gui_string('res_txt',res_label)
 
         # Test Sample Name
         sample_id = self.main_window.tracker_panel.sample_id
         run_no = self.main_window.tracker_panel.run_no
-        self.main_window.tracker_panel.pg_txt.SetLabel(sample_id)
-        self.main_window.tracker_panel.uc_txt.SetLabel(run_no)
+        self.main_window.tracker_panel.set_gui_string('pg_txt',sample_id)
+        self.main_window.tracker_panel.set_gui_string('uc_txt',run_no)
 
         #Avoids bug related to first time draw.
         if self.first_time_draw:
@@ -823,62 +823,39 @@ class TrackerPanel(wx.Panel):
         self.info_sizer.AddGrowableCol(4)
         self.info_panel.SetSizer(self.info_sizer)
 
-        #TODO: All these static boxe constructions to show string should be 
-        #      generated in some kind of function to avoid all the code 
-        #      repetition. By now there are so many of them this would
-        #      declutter things alot and make it easier to implement optionality
-        #      in the GUI between basic and extended versions.
-        self.count_box = wx.StaticBox(self.info_panel, label="Hits")
-        self.count_box_sizer = wx.StaticBoxSizer(self.count_box, wx.HORIZONTAL)
-        self.count_txt = wx.StaticText(self.info_panel, label="")
-        self.count_box_sizer.Add(
-            self.count_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10
-        )
+        #Basic Configuration
+        self.gui_strings = {}
+        self.gui_sizers = {}
+        #Extended Configuration
+        self.e_gui_strings = {}
+        self.e_gui_sizers = {}
 
-        self.count_box_rate = wx.StaticBox(self.info_panel, label="Hit Rate [%]")
-        self.rate_count_box_sizer = wx.StaticBoxSizer(self.count_box_rate, wx.HORIZONTAL)
-        self.count_rate_txt = wx.StaticText(self.info_panel, label="")
-        self.rate_count_box_sizer.Add(
-            self.count_rate_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10
-        )
+        basic_string_box_conf = [
+            ["count_txt", "count_box_sizer", self.info_panel, "Hits", ""],
+            ["count_rate_txt", "rate_count_box_sizer", self.info_panel, "Hit Rate [%]", ""],
+            ["idx_count_txt", "idx_count_box_sizer", self.info_panel, "Indexed", ""],
+            ["res_txt", "res_box_sizer", self.info_panel, "Median Resolution", ""],
+            ["pg_txt", "pg_box_sizer", self.info_panel, "Sample Label", ""],
+            ["uc_txt", "uc_box_sizer", self.info_panel, "Run Number", ""],
+        ]
 
-        self.idx_count_box = wx.StaticBox(self.info_panel, label="Indexed")
-        self.idx_count_box_sizer = wx.StaticBoxSizer(self.idx_count_box, wx.HORIZONTAL)
-        self.idx_count_txt = wx.StaticText(self.info_panel, label="")
-        self.idx_count_box_sizer.Add(
-            self.idx_count_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10
-        )
-
-        self.res_box = wx.StaticBox(self.info_panel, label="Median Resolution")
-        self.res_box_sizer = wx.StaticBoxSizer(self.res_box, wx.HORIZONTAL)
-        self.res_txt = wx.StaticText(self.info_panel, label="")
-        self.res_box_sizer.Add(self.res_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.pg_box = wx.StaticBox(self.info_panel, label="Sample Label")
-        self.pg_box_sizer = wx.StaticBoxSizer(self.pg_box, wx.HORIZONTAL)
-        self.pg_txt = wx.StaticText(self.info_panel, label="")
-        self.pg_box_sizer.Add(self.pg_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.uc_box = wx.StaticBox(self.info_panel, label="Run Number")
-        self.uc_box_sizer = wx.StaticBoxSizer(self.uc_box, wx.HORIZONTAL)
-        self.uc_txt = wx.StaticText(self.info_panel, label="")
-        self.uc_box_sizer.Add(self.uc_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+        self.gui_strings, self.gui_sizers = self._generate_str_elements(basic_string_box_conf)
 
         font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
-        self.count_txt.SetFont(font)
-        self.count_rate_txt.SetFont(font)
-        self.idx_count_txt.SetFont(font)
-        self.res_txt.SetFont(font)
+        self.gui_strings['count_txt'].SetFont(font)
+        self.gui_strings['count_rate_txt'].SetFont(font)
+        self.gui_strings['idx_count_txt'].SetFont(font)
+        self.gui_strings['res_txt'].SetFont(font)
         font = wx.Font(16, wx.DEFAULT, wx.NORMAL, wx.BOLD)
-        self.pg_txt.SetFont(font)
-        self.uc_txt.SetFont(font)
+        self.gui_strings['pg_txt'].SetFont(font)
+        self.gui_strings['uc_txt'].SetFont(font)
 
-        self.info_sizer.Add(self.count_box_sizer, flag=wx.EXPAND)
-        self.info_sizer.Add(self.rate_count_box_sizer, flag=wx.EXPAND)        
-        self.info_sizer.Add(self.idx_count_box_sizer, flag=wx.EXPAND)
-        self.info_sizer.Add(self.res_box_sizer, flag=wx.EXPAND)
-        self.info_sizer.Add(self.pg_box_sizer, flag=wx.EXPAND)
-        self.info_sizer.Add(self.uc_box_sizer, flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['count_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['rate_count_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['idx_count_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['res_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['pg_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['uc_box_sizer'], flag=wx.EXPAND)
 
         # Put in chart
         self.graph_panel = wx.Panel(self)
@@ -917,59 +894,25 @@ class TrackerPanel(wx.Panel):
         self.image_sizer = wx.GridBagSizer(5,3)
         self.image_chart = TrackImages(self.image_panel, main_window=self.main_window)
 
-        """
-        self.radio_box = wx.RadioBox(self.image_panel,
-                                     label= "Pipeline Panel",
-                                     pos=(0,0),
-                                     choices=["Full Preview", "Raw Image", "Debug", "Option 1", "Option 2"],
-                                     style = wx.RA_SPECIFY_ROWS)
-        """
         self.image_slider = wx.Slider(self.image_panel,
                                       maxValue=2000,
                                       name="Image Intensity Threshold",
                                       style=wx.SL_MIN_MAX_LABELS,
                                       size=wx.Size(400,50) )
 
+        extended_string_box_conf = [
+            ["det_label_txt", "det_label_box_sizer", self.image_panel, "Detector Label", "Biomax Eiger 16M"],
+            ["det_ip_txt", "det_ip_box_sizer", self.image_panel, "Detector IP", "127.000.000.001:9999"],
+            ["fps_txt", "fps_box_sizer", self.image_panel, "Framerate [FPS]", "0"],
+            ["pipeline_txt", "pipeline_box_sizer", self.image_panel, "Pipeline Status [OK/ERROR/CANCEL/UNKOWN]", "UNKNOWN"],
+            ["throughput_txt", "throughput_box_sizer", self.image_panel, "Avg. Frame Throughput Time [ms]", "1000 +/- 50"],
+            ["spotfinder_txt", "spotfinder_box_sizer", self.image_panel, "Spotfinder Algorithm", "Dozor"],
+            ["indexer_txt", "indexer_box_sizer", self.image_panel, "Indexing Algorithm", "None"],
+            ["mask_txt", "mask_box_sizer", self.image_panel, "Active Masking [None/Filepath]", "None"]
+        ]
+
         #Adding Pipeline Status
-        self.det_label_box = wx.StaticBox(self.image_panel, label="Detector Label")
-        self.det_label_box_sizer = wx.StaticBoxSizer(self.det_label_box, wx.HORIZONTAL)
-        self.det_label_txt = wx.StaticText(self.image_panel, label="Biomax Eiger 16M")
-        self.det_label_box_sizer.Add(self.det_label_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.det_ip_box = wx.StaticBox(self.image_panel, label="Detector IP")
-        self.det_ip_box_sizer = wx.StaticBoxSizer(self.det_ip_box, wx.HORIZONTAL)
-        self.det_ip_txt = wx.StaticText(self.image_panel, label="127.127.127.127:9999")
-        self.det_ip_box_sizer.Add(self.det_ip_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.fps_box = wx.StaticBox(self.image_panel, label="Framerate [FPS]")
-        self.fps_box_sizer = wx.StaticBoxSizer(self.fps_box, wx.HORIZONTAL)
-        self.fps_txt = wx.StaticText(self.image_panel, label="0")
-        self.fps_box_sizer.Add(self.fps_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.pipeline_box = wx.StaticBox(self.image_panel, label="Pipeline Status [OK/ERROR/CANCEL]")
-        self.pipeline_box_sizer = wx.StaticBoxSizer(self.pipeline_box, wx.HORIZONTAL)
-        self.pipeline_txt = wx.StaticText(self.image_panel, label="OK")
-        self.pipeline_box_sizer.Add(self.pipeline_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.throughput_box = wx.StaticBox(self.image_panel, label="Frame Throughput Time [ms]")
-        self.throughput_box_sizer = wx.StaticBoxSizer(self.throughput_box, wx.HORIZONTAL)
-        self.throughput_txt = wx.StaticText(self.image_panel, label="1000 +/- 50")
-        self.throughput_box_sizer.Add(self.throughput_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.spotfinder_box = wx.StaticBox(self.image_panel, label="Spotfinder Algorithm")
-        self.spotfinder_box_sizer = wx.StaticBoxSizer(self.spotfinder_box, wx.HORIZONTAL)
-        self.spotfinder_txt = wx.StaticText(self.image_panel, label="Dozor")
-        self.spotfinder_box_sizer.Add(self.spotfinder_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.indexer_box = wx.StaticBox(self.image_panel, label="Indexing Algorithm")
-        self.indexer_box_sizer = wx.StaticBoxSizer(self.indexer_box, wx.HORIZONTAL)
-        self.indexer_txt = wx.StaticText(self.image_panel, label="None")
-        self.indexer_box_sizer.Add(self.indexer_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.mask_box = wx.StaticBox(self.image_panel, label="Active Masking [None/Filepath]")
-        self.mask_box_sizer = wx.StaticBoxSizer(self.mask_box, wx.HORIZONTAL)
-        self.mask_txt = wx.StaticText(self.image_panel, label="None")
-        self.mask_box_sizer.Add(self.mask_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+        self.e_gui_strings, self.e_gui_sizers = self._generate_str_elements(extended_string_box_conf)
 
         self.slider_box = wx.StaticBox(self.image_panel, label="Preview Image Contrast Threshold")
         self.slider_box_sizer = wx.StaticBoxSizer(self.slider_box, wx.HORIZONTAL)
@@ -978,29 +921,28 @@ class TrackerPanel(wx.Panel):
 
 
         font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
-        self.det_label_txt.SetFont(font)
-        self.det_ip_txt.SetFont(font)
-        self.fps_txt.SetFont(font)
-        self.pipeline_txt.SetFont(font)
-        self.throughput_txt.SetFont(font)
-        self.spotfinder_txt.SetFont(font)
-        self.indexer_txt.SetFont(font)
-        self.mask_txt.SetFont(font)
+        self.e_gui_strings['det_label_txt'].SetFont(font)
+        self.e_gui_strings['det_ip_txt'].SetFont(font)
+        self.e_gui_strings['fps_txt'].SetFont(font)
+        self.e_gui_strings['pipeline_txt'].SetFont(font)
+        self.e_gui_strings['throughput_txt'].SetFont(font)
+        self.e_gui_strings['spotfinder_txt'].SetFont(font)
+        self.e_gui_strings['indexer_txt'].SetFont(font)
+        self.e_gui_strings['mask_txt'].SetFont(font)
 
         self.image_sizer.Add(self.image_chart, flag=wx.EXPAND | wx.ALL, pos=(0,0), span=(5,1))
         #self.image_sizer.Add(self.radio_box, flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,2))
-        self.image_sizer.Add(self.det_label_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,1))
-        self.image_sizer.Add(self.det_ip_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(1,1), span=(1,1))
-        self.image_sizer.Add(self.fps_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(2,1), span=(1,1))
-        self.image_sizer.Add(self.throughput_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(3,1), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['det_label_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['det_ip_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(1,1), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['fps_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(2,1), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['throughput_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(3,1), span=(1,1))
         self.image_sizer.Add(self.slider_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(4,1), span=(1,1))
 
-        self.image_sizer.Add(self.pipeline_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(0,2), span=(1,1))
-        self.image_sizer.Add(self.spotfinder_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(1,2), span=(1,1))
-        self.image_sizer.Add(self.indexer_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(2,2), span=(1,1))
-        self.image_sizer.Add(self.mask_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(3,2), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['pipeline_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(0,2), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['spotfinder_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(1,2), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['indexer_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(2,2), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['mask_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(3,2), span=(1,1))
 
-        #self.image_sizer.Add(self.image_slider, flag=wx.EXPAND | wx.ALL, pos=(4,0))
         #self.image_sizer.AddGrowableRow(0)
         #self.image_sizer.AddGrowableCol(0)
         #self.image_sizer.AddGrowableCol(1)
@@ -1027,12 +969,35 @@ class TrackerPanel(wx.Panel):
         #self.main_sizer.AddGrowableRow(3)
         self.SetSizer(self.main_sizer)
 
-    #ADDITION
+    #Internal helper function to build GUI
+    def _create_str_box(self, host_panel, box_label_str="", content_label_str=""):
+        box = wx.StaticBox(host_panel, label=box_label_str)
+        box_sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL )
+        box_str = wx.StaticText(host_panel, label=content_label_str)
+        box_sizer.Add(box_str, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+        return box_str, box_sizer
+
+    #Internal helper function to build GUI
+    def _generate_str_elements(self, configuration):
+        gui_strings = {}
+        gui_sizers = {}
+        for row in configuration:
+            gui_strings[row[0]],gui_sizers[row[1]]=self._create_str_box(row[2],row[3],row[4])
+        return gui_strings, gui_sizers
+
+    def set_gui_string(self,string_name, new_string):
+        self.gui_strings[string_name].SetLabel(new_string)
+        return
+
+    def set_extended_gui_string(self,string_name, new_string):
+        self.e_gui_strings[string_name].SetLabel(new_string)
+        return
+
     def set_sample_id(self,sample_string, run_no):
         self.sample_id = sample_string
         self.run_no = run_no
-        self.pg_txt.SetLabel(sample_string)
-        self.uc_txt.SetLabel(run_no)
+        self.gui_strings['pg_txt'].SetLabel(sample_string)
+        self.gui_strings['uc_txt'].SetLabel(run_no)
 
     def save_chart_data(self):
         self.all_data = self.chart.get_chart_data()
@@ -1318,18 +1283,17 @@ class TrackerWindow(wx.Frame):
     #Extended GUI
     def onMonitorStatusInfo(self, e):
         print("Received Monitor Status Callback!!")
-        fps_str = str(np.random.randint(100,150))
-        throughput_str = str(np.random.randint(200,300))
-        std_str = str(np.random.randint(1,30))
-        self.tracker_panel.fps_txt.SetLabel(fps_str)
-        self.tracker_panel.throughput_txt.SetLabel(throughput_str + " +/- " + std_str)
-        shift_no = self.counter % 4
-        time_str = "-\|/"
-        self.tracker_panel.pipeline_txt.SetLabel("OK ["+time_str[shift_no]+"]")
-
+        if self.tracker_panel is not None:
+            fps_str = str(np.random.randint(100,150))
+            throughput_str = str(np.random.randint(200,300))
+            std_str = str(np.random.randint(1,30))
+            self.tracker_panel.set_extended_gui_string('fps_txt',fps_str)
+            self.tracker_panel.set_extended_gui_string('throughput_txt',throughput_str + " +/- " + std_str)
+            shift_no = self.counter % 4
+            time_str = "-\|/"
+            self.tracker_panel.set_extended_gui_string('pipeline_txt',"OK ["+time_str[shift_no]+"]")
 
         self.counter += 1
-
 
     #Extended GUI
     def onPreviewImageInfo(self, e):
