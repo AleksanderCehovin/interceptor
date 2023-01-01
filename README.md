@@ -80,5 +80,18 @@ Test data with GUI using resolution for hit rate calculations
 
 ## TODO
 
-- Split datacollection and GUI plotting into two threads. How does this fit with the Python GIL lock? Do we need two processes?
-- When actively resizing window with mouse drag, the tab switches between runs does not work properly.
+- Datacollection seems to be done in a separate thread. The GUI manages to process 
+  ZMQ updates from a pipeline of up to around 1kHz in tests, bit it is clearly a bit overloaded. 
+  at some point one should make the reception better, either by batching data to decrease
+  the interrupt frequency on the GUI side, or somehow increase capacity on the GUI side. 
+  Not sure if more threads will work here due to the Python GIL lock, maybe a multi-process
+  route is needed. If this second route is tried, we will no longer have a common address
+  space, so data will have to be shuffled between processes with queueus? Is there already
+  some support for this in the wxwidgets library?. For now, this is not a problem, but
+  will have to be sorted out when moving above 1 kHz frequencies. Maybe just batching data
+  on the pipeline side is the best solution. Doing it on the GUI side will implement logic
+  more easily implemented upstream. 
+- When actively resizing window with mouse drag, the tab switching between runs does not work properly.
+- Argument to switch between basic and extended GUI versions
+- Refactor the setup of all the GUI strings.
+- Add support for extended GUI in the simulator.
