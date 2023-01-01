@@ -801,10 +801,11 @@ class TrackChart(wx.Panel):
 
 
 class TrackerPanel(wx.Panel):
-    def __init__(self, parent, main_window, run_number, use_resolution=False):
+    def __init__(self, parent, main_window, run_number, use_resolution=False, use_extended_gui=False):
         wx.Panel.__init__(self, parent=parent)
         self.parent = parent
         self.main_window = main_window
+        self.use_extended_gui = use_extended_gui
         self.chart_sash_position = 0
 
         self.all_data = []
@@ -889,6 +890,28 @@ class TrackerPanel(wx.Panel):
         self.graph_sizer.AddGrowableCol(0)
         self.graph_panel.SetSizer(self.graph_sizer)
 
+        if self.use_extended_gui:
+            self.initialize_extended_gui()
+
+        # Add all to main sizer
+        self.main_sizer.Add(
+            self.info_panel, pos=(0, 0), flag=wx.EXPAND | wx.ALL, border=5
+        )
+        self.main_sizer.Add(
+            self.graph_panel, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=5, span=(2,2)
+        )
+        if self.use_extended_gui:
+            #Add Image panel
+            self.main_sizer.Add(
+                self.image_panel, pos=(3,0), flag=wx.EXPAND | wx.ALL, border=5, span=(1,1)
+            )
+            self.main_sizer.AddGrowableRow(2)
+        self.main_sizer.AddGrowableCol(0)
+        self.main_sizer.AddGrowableRow(1)
+
+        self.SetSizer(self.main_sizer)
+
+    def initialize_extended_gui(self):
         #Image Panel
         self.image_panel = wx.Panel(self)
         self.image_sizer = wx.GridBagSizer(5,3)
@@ -950,25 +973,6 @@ class TrackerPanel(wx.Panel):
 
         self.image_panel.SetSizer(self.image_sizer)
 
-
-
-        # Add all to main sizer
-        self.main_sizer.Add(
-            self.info_panel, pos=(0, 0), flag=wx.EXPAND | wx.ALL, border=5
-        )
-        self.main_sizer.Add(
-            self.graph_panel, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=5, span=(2,2)
-        )
-        #Add Image panel
-        self.main_sizer.Add(
-            self.image_panel, pos=(3,0), flag=wx.EXPAND | wx.ALL, border=5, span=(1,1)
-        )
-        self.main_sizer.AddGrowableCol(0)
-        self.main_sizer.AddGrowableRow(1)
-        self.main_sizer.AddGrowableRow(2)
-        #self.main_sizer.AddGrowableRow(3)
-        self.SetSizer(self.main_sizer)
-
     #Internal helper function to build GUI
     def _create_str_box(self, host_panel, box_label_str="", content_label_str=""):
         box = wx.StaticBox(host_panel, label=box_label_str)
@@ -1026,9 +1030,10 @@ class TrackerPanel(wx.Panel):
 
 
 class TrackerWindow(wx.Frame):
-    def __init__(self, parent, id, title):
+    def __init__(self, parent, id, title, use_extended_gui=False):
         wx.Frame.__init__(self, parent, id, title, size=(1200, 1000))
         self.parent = parent
+        self.use_extended_gui=use_extended_gui
         #New Runs
         self.is_new_run_ongoing = False
         self.data_cache = []
@@ -1208,7 +1213,9 @@ class TrackerWindow(wx.Frame):
             print("Exception: TrackerWindow: self.tracker_panel.save_chart_data() failed")
             pass
         self.tracker_panel = TrackerPanel(
-            self.track_nb, main_window=self, run_number=run_no, use_resolution=self.use_resolution_threshold
+            self.track_nb, main_window=self, run_number=run_no, 
+            use_resolution=self.use_resolution_threshold,
+            use_extended_gui=self.use_extended_gui
         )
         self.track_panels[run_no] = self.tracker_panel
         self.track_nb.AddPage(self.tracker_panel, panel_title, select=True)
@@ -1241,7 +1248,7 @@ class TrackerWindow(wx.Frame):
 
     def create_collector(self):
         self.ui_timer = wx.Timer(self)
-        self.collector = rcv.Receiver(self)
+        self.collector = rcv.Receiver(self, use_extended_gui=self.use_extended_gui)
         self.Bind(rcv.EVT_SPFDONE, self.onCollectorInfo)
         self.Bind(wx.EVT_TIMER, self.collector.onUITimer, id=self.ui_timer.GetId())
         #Extended GUI
@@ -1404,12 +1411,16 @@ class TrackerWindow(wx.Frame):
 
 class MainTESTApp(wx.App):
     """ App for the main GUI window  """
+    def __init__(self, use_extended_gui=False):
+        self.use_extended_gui = use_extended_gui
+        wx.App.__init__(self,False)
 
     def OnInit(self):
         from interceptor import __version__ as intxr_version
 
         self.frame = TrackerWindow(
-            None, -1, title="MAXIV DOZOR INTERCEPTOR v.{}" "".format(intxr_version)
+            None, -1, title="MAXIV DOZOR INTERCEPTOR v.{}" "".format(intxr_version),
+            use_extended_gui=self.use_extended_gui
         )
         self.frame.SetMinSize(self.frame.GetEffectiveMinSize())
         self.frame.SetPosition((150, 150))
@@ -1423,5 +1434,5 @@ class MainTESTApp(wx.App):
 
 
 if __name__ == "__main__":
-    app = MainTESTApp(0)
+    app = MainTESTApp(use_extended_gui=True)
     app.MainLoop()

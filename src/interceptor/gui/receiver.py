@@ -26,10 +26,11 @@ RESET_SIZE = SIZE_DATA_CACHE - 1000
 
 
 class Receiver(Thread):
-    def __init__(self, parent):
+    def __init__(self, parent, use_extended_gui=False):
         Thread.__init__(self)
         self.parent = parent
         self.stop = False
+        self.use_extended_gui = use_extended_gui
         #List of dictionaries acting as data cache. We preallocate
         #an array of data entries to avoid running this through
         #garbage collection.
@@ -147,8 +148,9 @@ class Receiver(Thread):
                 self.bookmark = 0
 
         #GUI Extensions
-        self.poll_monitor_report()
-        self.poll_preview_image()
+        if self.use_extended_gui:
+            self.poll_monitor_report()
+            self.poll_preview_image()
 
     def poll_monitor_report(self):
         timestamp = time.time()

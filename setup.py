@@ -30,6 +30,7 @@ setuptools.setup(
         ],
         "gui_scripts": [
             "intxr.gui = interceptor.command_line.ui_run:entry_point",
+            "intxr.gui_extended = interceptor.command_line.ui_run:extended_entry_point",
         ],
         "libtbx.dispatcher.script": [
             "intxr.gui = intxr.gui",
