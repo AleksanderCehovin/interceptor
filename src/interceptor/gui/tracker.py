@@ -924,7 +924,7 @@ class TrackerPanel(wx.Panel):
                                       size=wx.Size(400,50) )
 
         extended_string_box_conf = [
-            ["det_label_txt", "det_label_box_sizer", self.image_panel, "Detector Label", "Biomax Eiger 16M"],
+            ["det_label_txt", "det_label_box_sizer", self.image_panel, "Detector Label", "UNKNOWN"],
             ["det_ip_txt", "det_ip_box_sizer", self.image_panel, "Detector IP", "000.000.000.000:0000"],
             ["fps_txt", "fps_box_sizer", self.image_panel, "Framerate [FPS]", "0"],
             ["pipeline_txt", "pipeline_box_sizer", self.image_panel, "Pipeline Status [OK/ERROR/CANCEL/UNKOWN]", "UNKNOWN"],

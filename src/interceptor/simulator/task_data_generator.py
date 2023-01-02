@@ -29,7 +29,7 @@ MAX_NO_RUNS=10
 INDEXED_RATE=20
 
 #Port number for stream socket
-PORT=5557
+PORT=9997
 
 # Sleep time between frames. Main parameter for effective FPS.
 SLEEP_S = 0.001
@@ -39,7 +39,7 @@ PRINT_INT_FRAMES = 500
 
 # Choose betwee PUSH-PULL or PUB-SUB
 GUI_TOPIC = "gui"
-MONITOR_TOPIC = "monitor"
+STATUS_TOPIC = "status"
 PREVIEW_TOPIC = "preview"
 
 #Image number step
@@ -88,7 +88,7 @@ def get_monitoring_data(counter, fps, run_no, sample_id):
     data_dict['pipeline_status'] = "OK ["+time_str[shift_no]+"]"
     data_dict['run_no'] = str(run_no)
     data_dict['sample_id'] = str(sample_id)
-    return MONITOR_TOPIC + " " + json.dumps(data_dict)
+    return STATUS_TOPIC + " " + json.dumps(data_dict)
 
 try:
     raw_input

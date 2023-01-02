@@ -16,7 +16,7 @@ import copy
 import json
 
 GUI_TOPIC_TOKEN = "gui"
-MONITOR_TOPIC_TOKEN = "monitor"
+STATUS_TOPIC_TOKEN = "status"
 
 #Preallocate data dictionaries and avoid dynamic allocations
 #Maybe this is exaggerated, but for now better safe than sorry on
@@ -66,7 +66,8 @@ class Receiver(Thread):
         self.collector = context.socket(zmq.SUB)
         self.collector.connect(url)
         self.collector.setsockopt_string(zmq.SUBSCRIBE,GUI_TOPIC_TOKEN)
-        self.collector.setsockopt_string(zmq.SUBSCRIBE,MONITOR_TOPIC_TOKEN)
+        if self.use_extended_gui:
+            self.collector.setsockopt_string(zmq.SUBSCRIBE,STATUS_TOPIC_TOKEN)
 
     def run(self):
         self.read_data()
@@ -82,8 +83,8 @@ class Receiver(Thread):
                 data_string = self.collector.recv_string(flags=zmq.NOBLOCK)
                 if data_string[0]=='g':
                     data_string = data_string[(len(GUI_TOPIC_TOKEN)+1):]
-                elif data_string[0]=='m':
-                    monitor_string = data_string[(len(MONITOR_TOPIC_TOKEN)+1):]
+                elif data_string[0]=='s':
+                    monitor_string = data_string[(len(STATUS_TOPIC_TOKEN)+1):]
                     self.process_monitor_report(json.loads(monitor_string))
                     continue
             except Exception as exp:
