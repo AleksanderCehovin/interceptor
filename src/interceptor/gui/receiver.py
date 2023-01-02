@@ -13,10 +13,10 @@ import zmq
 import numpy as np
 import wx
 import copy
+import json
 
-MONITOR_TOPIC_TOKEN = "gui"
-# TODO: Use the config files to switch between ZMQ patterns
-USE_PULL_PUSH = False
+GUI_TOPIC_TOKEN = "gui"
+MONITOR_TOPIC_TOKEN = "monitor"
 
 #Preallocate data dictionaries and avoid dynamic allocations
 #Maybe this is exaggerated, but for now better safe than sorry on
@@ -45,6 +45,7 @@ class Receiver(Thread):
         self.last_monitor_report_time = time.time()
         self.last_preview_time = time.time()
 
+
         #Pre-allocation of data cache at object creation.
         for i in range(0,SIZE_DATA_CACHE):
             self.all_info.append({
@@ -62,15 +63,10 @@ class Receiver(Thread):
         context = zmq.Context()
         url = "tcp://{}:{}".format(host, port)
         print("*** INTERCEPTOR CONNECTED TO {}".format(url))
-        if USE_PULL_PUSH:
-            self.collector = context.socket(zmq.PULL)
-            self.collector.bind("tcp://*:{}".format(port))
-        else:
-            self.collector = context.socket(zmq.SUB)
-            self.collector.connect(url)
-            topic_token = MONITOR_TOPIC_TOKEN
-            self.collector.setsockopt(zmq.SUBSCRIBE,topic_token.encode('utf-8'))
-
+        self.collector = context.socket(zmq.SUB)
+        self.collector.connect(url)
+        self.collector.setsockopt_string(zmq.SUBSCRIBE,GUI_TOPIC_TOKEN)
+        self.collector.setsockopt_string(zmq.SUBSCRIBE,MONITOR_TOPIC_TOKEN)
 
     def run(self):
         self.read_data()
@@ -84,8 +80,12 @@ class Receiver(Thread):
         while self.stop is False:
             try:
                 data_string = self.collector.recv_string(flags=zmq.NOBLOCK)
-                if not USE_PULL_PUSH:
-                    data_string = data_string[(len(MONITOR_TOPIC_TOKEN)+1):]
+                if data_string[0]=='g':
+                    data_string = data_string[(len(GUI_TOPIC_TOKEN)+1):]
+                elif data_string[0]=='m':
+                    monitor_string = data_string[(len(MONITOR_TOPIC_TOKEN)+1):]
+                    self.process_monitor_report(json.loads(monitor_string))
+                    continue
             except Exception as exp:
                 time.sleep(0.25)
             else:
@@ -93,7 +93,7 @@ class Receiver(Thread):
                 frame_idx = data_string.split('frame ')[1].split(' result')[0]
                 result_string = data_string.split('result ')[1].split(' mapping')[0]
                 results = result_string[1:-1].split()
-                sample_string = data_string.split('result ')[1].split(' mapping')[1]
+                sample_string = data_string.split('result ')[1].split(' mapping ')[1]
 
                 data = {
                     "run_no": run_no,
@@ -149,16 +149,15 @@ class Receiver(Thread):
 
         #GUI Extensions
         if self.use_extended_gui:
-            self.poll_monitor_report()
             self.poll_preview_image()
 
-    def poll_monitor_report(self):
-        timestamp = time.time()
-        if timestamp - self.last_monitor_report_time > 3.0:
-            evt = MonitorReportDone(tp_EVT_PIPELINE_STATUS, wx.ID_ANY)
-            wx.PostEvent(self.parent, evt)
-            self.last_monitor_report_time = timestamp
+    def process_monitor_report(self, monitor_dict):
+        evt = MonitorReportDone(tp_EVT_PIPELINE_STATUS, wx.ID_ANY, report=monitor_dict)
+        wx.PostEvent(self.parent, evt)
 
+    # TODO: Proof of concept preview image handler that internally generates data.
+    # Should be replaces by something similar to how the monitor reports are received
+    # from an external stream and implemented in the source simulator.
     def poll_preview_image(self):
         timestamp = time.time()
         if timestamp - self.last_preview_time > 5.0:

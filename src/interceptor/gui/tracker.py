@@ -925,10 +925,10 @@ class TrackerPanel(wx.Panel):
 
         extended_string_box_conf = [
             ["det_label_txt", "det_label_box_sizer", self.image_panel, "Detector Label", "Biomax Eiger 16M"],
-            ["det_ip_txt", "det_ip_box_sizer", self.image_panel, "Detector IP", "127.000.000.001:9999"],
+            ["det_ip_txt", "det_ip_box_sizer", self.image_panel, "Detector IP", "000.000.000.000:0000"],
             ["fps_txt", "fps_box_sizer", self.image_panel, "Framerate [FPS]", "0"],
             ["pipeline_txt", "pipeline_box_sizer", self.image_panel, "Pipeline Status [OK/ERROR/CANCEL/UNKOWN]", "UNKNOWN"],
-            ["throughput_txt", "throughput_box_sizer", self.image_panel, "Avg. Frame Throughput Time [ms]", "1000 +/- 50"],
+            ["throughput_txt", "throughput_box_sizer", self.image_panel, "Avg. Frame Throughput Time [ms]", "0 +/- 0"],
             ["spotfinder_txt", "spotfinder_box_sizer", self.image_panel, "Spotfinder Algorithm", "Dozor"],
             ["indexer_txt", "indexer_box_sizer", self.image_panel, "Indexing Algorithm", "None"],
             ["mask_txt", "mask_box_sizer", self.image_panel, "Active Masking [None/Filepath]", "None"]
@@ -940,8 +940,6 @@ class TrackerPanel(wx.Panel):
         self.slider_box = wx.StaticBox(self.image_panel, label="Preview Image Contrast Threshold")
         self.slider_box_sizer = wx.StaticBoxSizer(self.slider_box, wx.HORIZONTAL)
         self.slider_box_sizer.Add(self.image_slider, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-
 
         font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
         self.e_gui_strings['det_label_txt'].SetFont(font)
@@ -1041,9 +1039,6 @@ class TrackerWindow(wx.Frame):
         self.use_resolution_threshold = True
         #Keep track of highest received frame number
         self.max_received_frame_number = 0
-
-        #Internal update counter
-        self.counter = 0
 
         # initialize dictionary of tracker panels
         self.track_panels = {}
@@ -1290,21 +1285,22 @@ class TrackerWindow(wx.Frame):
     #Extended GUI
     def onMonitorStatusInfo(self, e):
         print("Received Monitor Status Callback!!")
-        if self.tracker_panel is not None:
-            fps_str = str(np.random.randint(100,150))
-            throughput_str = str(np.random.randint(200,300))
-            std_str = str(np.random.randint(1,30))
-            self.tracker_panel.set_extended_gui_string('fps_txt',fps_str)
-            self.tracker_panel.set_extended_gui_string('throughput_txt',throughput_str + " +/- " + std_str)
-            shift_no = self.counter % 4
-            time_str = "-\|/"
-            self.tracker_panel.set_extended_gui_string('pipeline_txt',"OK ["+time_str[shift_no]+"]")
-
-        self.counter += 1
+        monitor_dict = e.GetValue()
+        tab_id = self.getTabString(monitor_dict["sample_id"],monitor_dict["run_no"])
+        if self.track_panels is not None and tab_id in self.track_panels:
+            self.track_panels[tab_id].set_extended_gui_string('fps_txt',monitor_dict['framerate'])
+            self.track_panels[tab_id].set_extended_gui_string('throughput_txt',monitor_dict['avg_frame_throughput_time'])
+            self.track_panels[tab_id].set_extended_gui_string('pipeline_txt',monitor_dict['pipeline_status'])
+            self.track_panels[tab_id].set_extended_gui_string('det_ip_txt',monitor_dict['detector_ip'])
+            self.track_panels[tab_id].set_extended_gui_string('det_label_txt',monitor_dict['detector_label'])
+        else:
+            print("ERROR: Missing tab for Monitor Report")
 
     #Extended GUI
     def onPreviewImageInfo(self, e):
         print("Received Preview Image Callback!!")
+        #TODO: In this proof-of-concept state, the preview image of active tab will be overwritten.
+        #To keep last preview of any tab, we need to use tab_id like in the monitor status events.
         if self.tracker_panel is not None:
             self.tracker_panel.image_chart.reset_chart()
 
