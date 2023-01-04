@@ -63,7 +63,7 @@ def get_data(sample_id, run_no,img_no,no_spots,quality,hres,indexed="NA"):
     data=GUI_TOPIC + " " + data
     return data
 
-def get_monitoring_template():
+def get_status_template():
     return { 'detector_label': "Interceptor Simulator",
              'pipeline_status': "OK",
              'detector_ip': "localhost:"+str(PORT),
@@ -75,8 +75,8 @@ def get_monitoring_template():
              'run_no': "1",
              'sample_id': "None"}
 
-def get_monitoring_data(counter, fps, run_no, sample_id):
-    data_dict = get_monitoring_template()
+def get_status_data(counter, fps, run_no, sample_id):
+    data_dict = get_status_template()
 
     data_dict['framerate'] = "{:.2f}".format(fps)
     throughput_str = str(np.random.randint(200,300))
@@ -118,7 +118,7 @@ run_no=0
 sample_no = 0
 img_no=0
 fps_counter=1
-monitor_report_counter = 0
+status_report_counter = 0
 fps_time_start = time.time()
 for i in range(0,N):
     #Set up a new run which generates a new tab in GUI
@@ -152,10 +152,10 @@ for i in range(0,N):
         print("FPS:{:.2f}".format(fps))
         fps_time_start = time.time()
         fps_counter = 0
-        #Send Monitor Report
-        monitor_data = get_monitoring_data(monitor_report_counter,fps, run_no, sample_id)
-        sender.send_string(monitor_data)
-        monitor_report_counter += 1
+        #Send Status Report
+        status_data = get_status_data(status_report_counter,fps, run_no, sample_id)
+        sender.send_string(status_data)
+        status_report_counter += 1
     time.sleep(SLEEP_S)
 # Give 0MQ time to deliver
 time.sleep(1)

@@ -928,7 +928,7 @@ class TrackerPanel(wx.Panel):
             ["det_ip_txt", "det_ip_box_sizer", self.image_panel, "Detector IP", "000.000.000.000:0000"],
             ["fps_txt", "fps_box_sizer", self.image_panel, "Framerate [FPS]", "0"],
             ["pipeline_txt", "pipeline_box_sizer", self.image_panel, "Pipeline Status [OK/ERROR/CANCEL/UNKOWN]", "UNKNOWN"],
-            ["throughput_txt", "throughput_box_sizer", self.image_panel, "Avg. Frame Throughput Time [ms]", "0 +/- 0"],
+            ["throughput_txt", "throughput_box_sizer", self.image_panel, "Avg. Frame Throughput Time [s]", "0 +/- 0"],
             ["spotfinder_txt", "spotfinder_box_sizer", self.image_panel, "Spotfinder Algorithm", "Dozor"],
             ["indexer_txt", "indexer_box_sizer", self.image_panel, "Indexing Algorithm", "None"],
             ["mask_txt", "mask_box_sizer", self.image_panel, "Active Masking [None/Filepath]", "None"]
@@ -1294,7 +1294,7 @@ class TrackerWindow(wx.Frame):
             self.track_panels[tab_id].set_extended_gui_string('det_ip_txt',monitor_dict['detector_ip'])
             self.track_panels[tab_id].set_extended_gui_string('det_label_txt',monitor_dict['detector_label'])
         else:
-            print("ERROR: Missing tab for Monitor Report")
+            print("ERROR: Missing tab for Monitor Report, {}".format(tab_id))
 
     #Extended GUI
     def onPreviewImageInfo(self, e):
