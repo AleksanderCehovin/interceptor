@@ -11,6 +11,7 @@ import numpy as np
 import wx
 import copy
 import time
+import json
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -1143,6 +1144,11 @@ class TrackerWindow(wx.Frame):
         selstring = ctrl.GetString(ctrl.GetSelection())
         host = blconfig[selstring]['host']
         port = blconfig[selstring]['port']
+        if 'json_input_params' in blconfig[selstring]:
+            with open(blconfig[selstring]['json_input_params'],'r') as file_handle:
+                param_dict = json.loads(file_handle.read())
+                host = param_dict['collector']['ip']
+                port = param_dict['collector']['port']
         self.tb_ctrl_host.GetControl().SetValue(host)
         self.tb_ctrl_port.GetControl().SetValue(port)
 
