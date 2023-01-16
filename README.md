@@ -88,6 +88,28 @@ is happending to more complicated pipelines. Pipeline development has been movin
 with the possibility to reconfigure parameters under runtime by sending control commands. It is in 
 this scenario the additional information in the extended GUI becomes useful. 
 
+```mermaid
+graph TD;
+  subgraph "Simple Interceptor GUI"
+  SUB[gui] --> GUI;
+  end
+
+  subgraph "Extended Simple Interceptor GUI"
+  SUB[gui] --> GUI;
+  SUB[status] --> GUI;
+  end
+
+
+  subgraph "Data Source"
+  Data --> PUB[gui];
+  Data --> PUB[status];
+  Data --> PUB[preview];
+  PUB[gui] --> SUB[gui]
+  PUB[status] --> SUB[status]
+  end
+```
+
+
 
 ## Simulator
 
