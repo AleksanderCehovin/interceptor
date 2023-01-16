@@ -6,20 +6,29 @@
 
 ## Fork Description
 
-This is an Interceptor,  https://github.com/ssrl-px/interceptor,  fork for experimental modifications. The purpose is to adapt the code for Max IV,  www.maxiv.lu.se, purposes. 
+This is an Interceptor,  https://github.com/ssrl-px/interceptor,  fork for experimental 
+modifications. The purpose is to adapt the code for Max IV,  www.maxiv.lu.se, purposes. 
 
-In this project, the GUI part has been isolated and adapted to present Dozor spotfinding quality metrics. Much has been
-removed from the original code, and this repository is much easier to install in a Conda environment. There are no more depencies on DIALS.
-The simulator/ directory contains a python script that can be used to feed the GUI with fake test data for standalone evaluation and debugging. 
+In this project, the GUI part has been isolated and adapted to present Dozor spotfinding quality metrics. 
+Much has been removed from the original code, and this repository is much easier to install in a Conda 
+environment. There are no more depencies on DIALS. The simulator/ directory contains a python script 
+that can be used to feed the GUI with fake test data for standalone evaluation and debugging. 
 
 Some notes on the code:
 
 - GUI modified for Dozor spotfinding metrics (number of spots, quality, and resolution)
-- The update frequency of the graphics is intentionally set at 1 Hz (configurable). From what I undertand the ZMQ data collection loop is done in a
-  separate thread as the GUI, but they still work within the limitation of the Python GIL (I'm guessing). It is therefore important to avoid starving the execution with excessive GUI updates. TODO list below discusses solutions to this issue.
-- If a run tab collects large amount of points, the plot will only show the last 25k points in a moving windows. This is configurable.
-- The hitrate and thresholding can be done on either quality or resolution metrics. Use the "hve (resolution)" and "hve (quality)" beamline tabs to evaluate this.
-- There is a callback function implemented triggered by clicking a point in the first subplot. This could be used to view image details in an external program. The ADXV viewer, https://www.scripps.edu/tainer/arvai/adxv/adxv_1.9.10/AdxvUserManual_v1.1.pdf , fits this use-case. The manual describes a socket interface, which is a way to integrate a viewer already well-known to users.
+- The update frequency of the graphics is intentionally set at 1 Hz (configurable). From what I 
+undertand the ZMQ data collection loop is done in a separate thread as the GUI, but they still work within 
+the limitation of the Python GIL (I'm guessing). It is therefore important to avoid starving the execution 
+with excessive GUI updates. TODO list below discusses solutions to this issue.
+- If a run tab collects large amount of points, the plot will only show the last 25k points in a moving 
+windows. This is configurable.
+- The hitrate and thresholding can be done on either quality or resolution metrics. Use the "hve (resolution)" 
+and "hve (quality)" beamline tabs to evaluate this.
+- There is a callback function implemented triggered by clicking a point in the first subplot. This could 
+be used to view image details in an external program. The ADXV viewer, 
+https://www.scripps.edu/tainer/arvai/adxv/adxv_1.9.10/AdxvUserManual_v1.1.pdf , fits this use-case. The 
+manual describes a socket interface, which is a way to integrate a viewer already well-known to users.
 - In some scenarios many tabs can be created. The "Clear Tabs" button removes all but the active tab.
 
 aleksander.cehovin@maxiv.lu.se
@@ -62,10 +71,28 @@ Here we assume the current directory is the root folder above the interceptor ch
 
 The interceptor GUI is now available as "intxr.gui"
 
+## Simple vs Extended GUI
+
+There are now two GUI versions available. The simple one,
+
+> intxr.gui
+
+and the extended one
+
+> intxr.extended_gui
+
+Both work on any data source. The extended GUI relies on ZMQ subscription to additional channels.
+This means, that extended data is optional. The simpler GUI simply do not subscribe to this additional
+information and can run as before. The extended GUI is useful as a development tool to monitor what 
+is happending to more complicated pipelines. Pipeline development has been moving to long-running execution
+with the possibility to reconfigure parameters under runtime by sending control commands. It is in 
+this scenario the additional information in the extended GUI becomes useful. 
+
 
 ## Simulator
 
-There is a simulation folder where two simple scripts can be used to generate and test the data-stream the interceptor GUI relies upon as data input.
+There is a simulation folder where two simple scripts can be used to generate and test the data-stream 
+the interceptor GUI relies upon as data input.
 
 ### Simulation Data Examples
 
@@ -96,7 +123,6 @@ Test data with the new extended GUI using resolutin for hit rate calculations
   on the pipeline side is the best solution. Doing it on the GUI side will implement logic
   more easily implemented upstream. 
 - When actively resizing window with mouse drag, the tab switching between runs does not work properly.
-- Argument to switch between basic and extended GUI versions
 - Refactor the setup of all the GUI strings.
-- Add support for extended GUI in the simulator.
+- Add support for preview images in the extended GUI in the simulator.
 - Use a proper test screen image for when preview images are not available?
