@@ -91,21 +91,21 @@ this scenario the additional information in the extended GUI becomes useful.
 ```mermaid
 graph TD;
   subgraph "Simple Interceptor GUI"
-  SUB[gui] --> GUI;
+  SUB(gui) --> GUI;
   end
 
   subgraph "Extended Simple Interceptor GUI"
-  SUB[gui] --> GUI;
-  SUB[status] --> GUI;
+  SUB(gui) --> GUI;
+  SUB(status) --> GUI;
   end
 
 
   subgraph "Data Source"
-  Data --> PUB[gui];
-  Data --> PUB[status];
-  Data --> PUB[preview];
-  PUB[gui] --> SUB[gui]
-  PUB[status] --> SUB[status]
+  Data --> PUB(gui);
+  Data --> PUB(status);
+  Data --> PUB(preview);
+  PUB[gui] --> SUB(gui);
+  PUB[status] --> SUB(status);
   end
 ```
 
