@@ -11,6 +11,8 @@ import zmq
 import time
 import math
 import random
+import json
+import numpy as np
 
 #Total number of data points. I think this data
 #allocated memory on the GUI side, don't go astronomical
@@ -30,14 +32,15 @@ INDEXED_RATE=20
 PORT=5557
 
 # Sleep time between frames. Main parameter for effective FPS.
-SLEEP_S = 0.001
+SLEEP_S = 0.003
 
 # STD OUT PRINT INTERVAL
 PRINT_INT_FRAMES = 500
 
 # Choose betwee PUSH-PULL or PUB-SUB
-USE_PUSH_PULL = False
 GUI_TOPIC = "gui"
+STATUS_TOPIC = "status"
+PREVIEW_TOPIC = "preview"
 
 #Image number step
 IMG_NO_STEP = 1
@@ -57,9 +60,35 @@ def get_quality(index,period):
 def get_data(sample_id, run_no,img_no,no_spots,quality,hres,indexed="NA"):
     data=u"run {} frame {} result  {} {} {} {} {} {} {} {}  mapping {}".format(run_no,
             img_no,no_spots,4,quality,hres,7,8,indexed,10,sample_id)
-    if not USE_PUSH_PULL:
-        data=GUI_TOPIC + " " + data
+    data=GUI_TOPIC + " " + data
     return data
+
+def get_status_template():
+    return { 'detector_label': "Interceptor Simulator",
+             'pipeline_status': "OK",
+             'detector_ip': "localhost:"+str(PORT),
+             'spotfinder_algorithm': "Dozor",
+             'framerate': "0",
+             'indexing_algorithm': "None",
+             'avg_frame_throughput_time': "N/A",
+             'active_masking': "None",
+             'run_no': "1",
+             'sample_id': "None"}
+
+def get_status_data(counter, fps, run_no, sample_id):
+    data_dict = get_status_template()
+
+    data_dict['framerate'] = "{:.2f}".format(fps)
+    throughput_str = str(np.random.randint(200,300))
+    std_str = str(np.random.randint(1,30))
+    throughput_str = throughput_str + " +/- " + std_str
+    data_dict['avg_frame_throughput_time'] = throughput_str
+    shift_no = counter % 4
+    time_str = "-\|/"
+    data_dict['pipeline_status'] = "OK ["+time_str[shift_no]+"]"
+    data_dict['run_no'] = str(run_no)
+    data_dict['sample_id'] = str(sample_id)
+    return STATUS_TOPIC + " " + json.dumps(data_dict)
 
 try:
     raw_input
@@ -71,19 +100,12 @@ except NameError:
 context = zmq.Context()
 
 # Setup socket for communication
-if USE_PUSH_PULL:
-    sender = context.socket(zmq.PUSH)
-    sender.connect("tcp://localhost:{}".format(PORT))
-else:
-    sender = context.socket(zmq.PUB)
-    sender.bind("tcp://*:{}".format(PORT))
+sender = context.socket(zmq.PUB)
+sender.bind("tcp://*:{}".format(PORT))
 
 print("******************************************\n")
 print("Pipeline connected to tcp://localhost:{}\n".format(PORT))
-if USE_PUSH_PULL:
-    print("ZMQ Pattern PUSH-PULL\n")
-else:
-    print("ZMQ Pattern PUB-SUB\n")
+print("ZMQ Pattern PUB-SUB\n")
 print("******************************************\n")
 
 #Wait for user confirmation before starting to push data
@@ -96,6 +118,7 @@ run_no=0
 sample_no = 0
 img_no=0
 fps_counter=1
+status_report_counter = 0
 fps_time_start = time.time()
 for i in range(0,N):
     #Set up a new run which generates a new tab in GUI
@@ -125,9 +148,14 @@ for i in range(0,N):
     fps_counter += 1
     if fps_counter % PRINT_INT_FRAMES == 0:
         deltaT = time.time() - fps_time_start
-        print("FPS:{:.2f}".format(fps_counter/deltaT))
+        fps = fps_counter/deltaT
+        print("FPS:{:.2f}".format(fps))
         fps_time_start = time.time()
         fps_counter = 0
+        #Send Status Report
+        status_data = get_status_data(status_report_counter,fps, run_no, sample_id)
+        sender.send_string(status_data)
+        status_report_counter += 1
     time.sleep(SLEEP_S)
 # Give 0MQ time to deliver
 time.sleep(1)

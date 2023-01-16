@@ -11,6 +11,7 @@ import numpy as np
 import wx
 import copy
 import time
+import json
 
 from matplotlib.backends.backend_wxagg import FigureCanvasWxAgg as FigureCanvas
 from matplotlib.figure import Figure
@@ -221,9 +222,64 @@ def clear_subplots(subplot_instance):
     subplot_instance.clear()
     subplot_instance.patch.set_visible(False)
 
+
+class TrackImages(wx.Panel):
+    def __init__(self, parent, main_window):
+        wx.Panel.__init__(self, parent, size=wx.Size(350, 350))
+        self.main_window = main_window
+        self.parent = parent
+
+        self.main_box = wx.StaticBox(self, label="Preview Images")
+        self.main_fig_sizer = wx.StaticBoxSizer(self.main_box, wx.VERTICAL)
+        self.SetSizer(self.main_fig_sizer)
+
+        self.track_figure = Figure(figsize=[2,2], tight_layout=True)
+        self.track_axes = {}
+        self.track_axes['main'] = self.track_figure.add_subplot(111)
+        #set_subplot_labels(self.track_axes['main'],"Preview Frame","Pixel Intensity")
+        self.track_figure.set_tight_layout(True)
+
+        self.track_canvas = FigureCanvas(self, -1, self.track_figure)
+
+        self.track_axes['main'].patch.set_visible(False)
+
+        self.main_fig_sizer.Add(self.track_canvas,1,wx.EXPAND)
+
+
+        self.reset_chart()
+
+    def reset_chart(self):
+        self.track_figure.patch.set_visible(False)
+        clear_subplots(self.track_axes['main'])
+        #set_subplot_labels(self.track_axes['main'],"Preview Frame","Pixel Intensity")
+        self.image_plot = self.track_axes['main'].imshow( 100*np.random.rand(100,100))
+        self.track_axes['main'].axis('off')
+        self.track_axes['main'].set_autoscaley_on(True)
+        self.track_figure.patch.set_visible(True)
+        self._update_canvas(canvas=self.track_canvas)
+
+
+    def _update_canvas(self, canvas, draw_idle=True):
+        """ Update a canvas (passed as arg)
+    :param canvas: A canvas to be updated via draw_idle
+    """
+        # Draw_idle is useful for regular updating of the chart; straight-up draw
+        # without flush_events() will have to be used when buttons are clicked to
+        # avoid recursive calling of wxYield
+        if draw_idle:
+            canvas.draw_idle()
+            try:
+                canvas.flush_events()
+            except (NotImplementedError, AssertionError):
+                pass
+        else:
+            canvas.draw()
+        canvas.Refresh()
+
+
 class TrackChart(wx.Panel):
     def __init__(self, parent, main_window, use_resolution=False):
-        wx.Panel.__init__(self, parent, size=(100, 100))
+        wx.Panel.__init__(self, parent, size=(40, 40))
         self.main_window = main_window
         self.parent = parent
         self.zoom_ctrl = self.parent.GetParent().chart_zoom
@@ -237,7 +293,7 @@ class TrackChart(wx.Panel):
         self.SetSizer(self.main_fig_sizer)
 
         self.resize_counter = 0 # ALEK
-        self.track_figure = Figure()
+        self.track_figure = Figure(figsize=[12,4])
         self.track_axes = {}
 
         #Presentation depends on whether thresholding and hitrate is based 
@@ -628,12 +684,6 @@ class TrackChart(wx.Panel):
             return
         
         # split acc/rej lists into x and y lists
-        """
-        acc_x = [int(i[0]) for i in acc]
-        acc_y = [int(i[1]) for i in acc]
-        rej_x = [int(i[0]) for i in rej]
-        rej_y = [int(i[1]) for i in rej]
-        """
         acc_x = [int(i[0]) for i in acc]
         acc_y = [float(i[1]) for i in acc]
         rej_x = [int(i[0]) for i in rej]
@@ -664,37 +714,37 @@ class TrackChart(wx.Panel):
         if new_i is not None:
             self.idx_plot.set_data(nref_x, nref_i)
             idx_count = "{}".format(len(nref_i[~np.isnan(nref_i)]))
-            self.main_window.tracker_panel.idx_count_txt.SetLabel(idx_count)
+            self.main_window.tracker_panel.set_gui_string('idx_count_txt',idx_count)
 
         self.Layout()
 
         # update run stats
         # hit count
         count = "{}".format(len(acc))
-        self.main_window.tracker_panel.count_txt.SetLabel(count)
+        self.main_window.tracker_panel.set_gui_string('count_txt',count)
         self.main_window.tracker_panel.info_sizer.Layout()
 
         # hit rate count
         if len(rej) == 0:
             count_rate = "{:.1f}".format(100)
         else:
-            count_rate = "{:.1f}".format(100*len(acc)/(1.0*(len(acc)+len(rej))))        
-        self.main_window.tracker_panel.count_rate_txt.SetLabel(count_rate)
+            count_rate = "{:.1f}".format(100*len(acc)/(1.0*(len(acc)+len(rej))))
+        self.main_window.tracker_panel.set_gui_string('count_rate_txt',count_rate)
 
         # indexed count
         idx_count = "{}".format(len(nref_i[~np.isnan(nref_i)]))
-        self.main_window.tracker_panel.idx_count_txt.SetLabel(idx_count)
+        self.main_window.tracker_panel.set_gui_string('idx_count_txt',idx_count)
 
         # Median resolution
         median_res = np.median(self.rdata)
         res_label = "{:.2f} Å".format(median_res)
-        self.main_window.tracker_panel.res_txt.SetLabel(res_label)
+        self.main_window.tracker_panel.set_gui_string('res_txt',res_label)
 
         # Test Sample Name
         sample_id = self.main_window.tracker_panel.sample_id
         run_no = self.main_window.tracker_panel.run_no
-        self.main_window.tracker_panel.pg_txt.SetLabel(sample_id)
-        self.main_window.tracker_panel.uc_txt.SetLabel(run_no)
+        self.main_window.tracker_panel.set_gui_string('pg_txt',sample_id)
+        self.main_window.tracker_panel.set_gui_string('uc_txt',run_no)
 
         #Avoids bug related to first time draw.
         if self.first_time_draw:
@@ -752,10 +802,11 @@ class TrackChart(wx.Panel):
 
 
 class TrackerPanel(wx.Panel):
-    def __init__(self, parent, main_window, run_number, use_resolution=False):
+    def __init__(self, parent, main_window, run_number, use_resolution=False, use_extended_gui=False):
         wx.Panel.__init__(self, parent=parent)
         self.parent = parent
         self.main_window = main_window
+        self.use_extended_gui = use_extended_gui
         self.chart_sash_position = 0
 
         self.all_data = []
@@ -766,7 +817,7 @@ class TrackerPanel(wx.Panel):
         self.sample_id = "None"
         self.run_no = "1"
 
-        self.main_sizer = wx.GridBagSizer(10, 10)
+        self.main_sizer = wx.GridBagSizer(4, 4)
 
         # Status box
         self.info_panel = wx.Panel(self)
@@ -774,61 +825,43 @@ class TrackerPanel(wx.Panel):
         self.info_sizer.AddGrowableCol(4)
         self.info_panel.SetSizer(self.info_sizer)
 
-        self.count_box = wx.StaticBox(self.info_panel, label="Hits")
-        self.count_box_sizer = wx.StaticBoxSizer(self.count_box, wx.HORIZONTAL)
-        self.count_txt = wx.StaticText(self.info_panel, label="")
-        self.count_box_sizer.Add(
-            self.count_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10
-        )
+        #Basic Configuration
+        self.gui_strings = {}
+        self.gui_sizers = {}
+        #Extended Configuration
+        self.e_gui_strings = {}
+        self.e_gui_sizers = {}
 
-        self.count_box_rate = wx.StaticBox(self.info_panel, label="Hit Rate [%]")
-        self.rate_count_box_sizer = wx.StaticBoxSizer(self.count_box_rate, wx.HORIZONTAL)
-        self.count_rate_txt = wx.StaticText(self.info_panel, label="")
-        self.rate_count_box_sizer.Add(
-            self.count_rate_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10
-        )
+        basic_string_box_conf = [
+            ["count_txt", "count_box_sizer", self.info_panel, "Hits", ""],
+            ["count_rate_txt", "rate_count_box_sizer", self.info_panel, "Hit Rate [%]", ""],
+            ["idx_count_txt", "idx_count_box_sizer", self.info_panel, "Indexed", ""],
+            ["res_txt", "res_box_sizer", self.info_panel, "Median Resolution", ""],
+            ["pg_txt", "pg_box_sizer", self.info_panel, "Sample Label", ""],
+            ["uc_txt", "uc_box_sizer", self.info_panel, "Run Number", ""],
+        ]
 
-        self.idx_count_box = wx.StaticBox(self.info_panel, label="Indexed")
-        self.idx_count_box_sizer = wx.StaticBoxSizer(self.idx_count_box, wx.HORIZONTAL)
-        self.idx_count_txt = wx.StaticText(self.info_panel, label="")
-        self.idx_count_box_sizer.Add(
-            self.idx_count_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10
-        )
-
-        self.res_box = wx.StaticBox(self.info_panel, label="Median Resolution")
-        self.res_box_sizer = wx.StaticBoxSizer(self.res_box, wx.HORIZONTAL)
-        self.res_txt = wx.StaticText(self.info_panel, label="")
-        self.res_box_sizer.Add(self.res_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.pg_box = wx.StaticBox(self.info_panel, label="Sample Label")
-        self.pg_box_sizer = wx.StaticBoxSizer(self.pg_box, wx.HORIZONTAL)
-        self.pg_txt = wx.StaticText(self.info_panel, label="")
-        self.pg_box_sizer.Add(self.pg_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
-
-        self.uc_box = wx.StaticBox(self.info_panel, label="Run Number")
-        self.uc_box_sizer = wx.StaticBoxSizer(self.uc_box, wx.HORIZONTAL)
-        self.uc_txt = wx.StaticText(self.info_panel, label="")
-        self.uc_box_sizer.Add(self.uc_txt, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+        self.gui_strings, self.gui_sizers = self._generate_str_elements(basic_string_box_conf)
 
         font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
-        self.count_txt.SetFont(font)
-        self.count_rate_txt.SetFont(font)
-        self.idx_count_txt.SetFont(font)
-        self.res_txt.SetFont(font)
+        self.gui_strings['count_txt'].SetFont(font)
+        self.gui_strings['count_rate_txt'].SetFont(font)
+        self.gui_strings['idx_count_txt'].SetFont(font)
+        self.gui_strings['res_txt'].SetFont(font)
         font = wx.Font(16, wx.DEFAULT, wx.NORMAL, wx.BOLD)
-        self.pg_txt.SetFont(font)
-        self.uc_txt.SetFont(font)
+        self.gui_strings['pg_txt'].SetFont(font)
+        self.gui_strings['uc_txt'].SetFont(font)
 
-        self.info_sizer.Add(self.count_box_sizer, flag=wx.EXPAND)
-        self.info_sizer.Add(self.rate_count_box_sizer, flag=wx.EXPAND)        
-        self.info_sizer.Add(self.idx_count_box_sizer, flag=wx.EXPAND)
-        self.info_sizer.Add(self.res_box_sizer, flag=wx.EXPAND)
-        self.info_sizer.Add(self.pg_box_sizer, flag=wx.EXPAND)
-        self.info_sizer.Add(self.uc_box_sizer, flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['count_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['rate_count_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['idx_count_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['res_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['pg_box_sizer'], flag=wx.EXPAND)
+        self.info_sizer.Add(self.gui_sizers['uc_box_sizer'], flag=wx.EXPAND)
 
         # Put in chart
         self.graph_panel = wx.Panel(self)
-        self.graph_sizer = wx.GridBagSizer(5, 5)
+        self.graph_sizer = wx.GridBagSizer(2, 2)
 
         self.chart_zoom = ZoomCtrl(self.graph_panel, main_window)
         self.chart = TrackChart(self.graph_panel, main_window=self.main_window,
@@ -850,31 +883,124 @@ class TrackerPanel(wx.Panel):
             ctrl_step=ctrl_step_val,
         )
 
-        self.graph_sizer.Add(self.chart, flag=wx.EXPAND, pos=(0, 0), span=(1, 3))
+        self.graph_sizer.Add(self.chart, flag=wx.EXPAND, pos=(0, 0), span=(1, 2))
         self.graph_sizer.Add(self.min_bragg, flag=wx.ALIGN_LEFT, pos=(1, 0))
         self.graph_sizer.Add(self.chart_zoom, flag=wx.ALIGN_CENTER, pos=(1, 1))
 
         self.graph_sizer.AddGrowableRow(0)
-        self.graph_sizer.AddGrowableCol(1)
+        self.graph_sizer.AddGrowableCol(0)
         self.graph_panel.SetSizer(self.graph_sizer)
+
+        if self.use_extended_gui:
+            self.initialize_extended_gui()
 
         # Add all to main sizer
         self.main_sizer.Add(
             self.info_panel, pos=(0, 0), flag=wx.EXPAND | wx.ALL, border=5
         )
         self.main_sizer.Add(
-            self.graph_panel, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=5
+            self.graph_panel, pos=(1, 0), flag=wx.EXPAND | wx.ALL, border=5, span=(2,2)
         )
+        if self.use_extended_gui:
+            #Add Image panel
+            self.main_sizer.Add(
+                self.image_panel, pos=(3,0), flag=wx.EXPAND | wx.ALL, border=5, span=(1,1)
+            )
+            self.main_sizer.AddGrowableRow(2)
         self.main_sizer.AddGrowableCol(0)
         self.main_sizer.AddGrowableRow(1)
+
         self.SetSizer(self.main_sizer)
 
-    #ADDITION
+    def initialize_extended_gui(self):
+        #Image Panel
+        self.image_panel = wx.Panel(self)
+        self.image_sizer = wx.GridBagSizer(5,3)
+        self.image_chart = TrackImages(self.image_panel, main_window=self.main_window)
+
+        self.image_slider = wx.Slider(self.image_panel,
+                                      maxValue=2000,
+                                      name="Image Intensity Threshold",
+                                      style=wx.SL_MIN_MAX_LABELS,
+                                      size=wx.Size(400,50) )
+
+        extended_string_box_conf = [
+            ["det_label_txt", "det_label_box_sizer", self.image_panel, "Detector Label", "UNKNOWN"],
+            ["det_ip_txt", "det_ip_box_sizer", self.image_panel, "Detector IP", "000.000.000.000:0000"],
+            ["fps_txt", "fps_box_sizer", self.image_panel, "Framerate [FPS]", "0"],
+            ["pipeline_txt", "pipeline_box_sizer", self.image_panel, "Pipeline Status [OK/ERROR/CANCEL/UNKOWN]", "UNKNOWN"],
+            ["throughput_txt", "throughput_box_sizer", self.image_panel, "Avg. Frame Throughput Time [s]", "0 +/- 0"],
+            ["spotfinder_txt", "spotfinder_box_sizer", self.image_panel, "Spotfinder Algorithm", "Dozor"],
+            ["indexer_txt", "indexer_box_sizer", self.image_panel, "Indexing Algorithm", "None"],
+            ["mask_txt", "mask_box_sizer", self.image_panel, "Active Masking [None/Filepath]", "None"]
+        ]
+
+        #Adding Pipeline Status
+        self.e_gui_strings, self.e_gui_sizers = self._generate_str_elements(extended_string_box_conf)
+
+        self.slider_box = wx.StaticBox(self.image_panel, label="Preview Image Contrast Threshold")
+        self.slider_box_sizer = wx.StaticBoxSizer(self.slider_box, wx.HORIZONTAL)
+        self.slider_box_sizer.Add(self.image_slider, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+
+        font = wx.Font(18, wx.DEFAULT, wx.NORMAL, wx.BOLD)
+        self.e_gui_strings['det_label_txt'].SetFont(font)
+        self.e_gui_strings['det_ip_txt'].SetFont(font)
+        self.e_gui_strings['fps_txt'].SetFont(font)
+        self.e_gui_strings['pipeline_txt'].SetFont(font)
+        self.e_gui_strings['throughput_txt'].SetFont(font)
+        self.e_gui_strings['spotfinder_txt'].SetFont(font)
+        self.e_gui_strings['indexer_txt'].SetFont(font)
+        self.e_gui_strings['mask_txt'].SetFont(font)
+
+        self.image_sizer.Add(self.image_chart, flag=wx.EXPAND | wx.ALL, pos=(0,0), span=(5,1))
+        #self.image_sizer.Add(self.radio_box, flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,2))
+        self.image_sizer.Add(self.e_gui_sizers['det_label_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(0,1), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['det_ip_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(1,1), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['fps_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(2,1), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['throughput_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(3,1), span=(1,1))
+        self.image_sizer.Add(self.slider_box_sizer, flag=wx.EXPAND | wx.ALL, pos=(4,1), span=(1,1))
+
+        self.image_sizer.Add(self.e_gui_sizers['pipeline_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(0,2), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['spotfinder_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(1,2), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['indexer_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(2,2), span=(1,1))
+        self.image_sizer.Add(self.e_gui_sizers['mask_box_sizer'], flag=wx.EXPAND | wx.ALL, pos=(3,2), span=(1,1))
+
+        #self.image_sizer.AddGrowableRow(0)
+        #self.image_sizer.AddGrowableCol(0)
+        #self.image_sizer.AddGrowableCol(1)
+        self.image_sizer.AddGrowableCol(2)
+
+        self.image_panel.SetSizer(self.image_sizer)
+
+    #Internal helper function to build GUI
+    def _create_str_box(self, host_panel, box_label_str="", content_label_str=""):
+        box = wx.StaticBox(host_panel, label=box_label_str)
+        box_sizer = wx.StaticBoxSizer(box, wx.HORIZONTAL )
+        box_str = wx.StaticText(host_panel, label=content_label_str)
+        box_sizer.Add(box_str, flag=wx.ALL | wx.ALIGN_CENTER, border=10)
+        return box_str, box_sizer
+
+    #Internal helper function to build GUI
+    def _generate_str_elements(self, configuration):
+        gui_strings = {}
+        gui_sizers = {}
+        for row in configuration:
+            gui_strings[row[0]],gui_sizers[row[1]]=self._create_str_box(row[2],row[3],row[4])
+        return gui_strings, gui_sizers
+
+    def set_gui_string(self,string_name, new_string):
+        self.gui_strings[string_name].SetLabel(new_string)
+        return
+
+    def set_extended_gui_string(self,string_name, new_string):
+        self.e_gui_strings[string_name].SetLabel(new_string)
+        return
+
     def set_sample_id(self,sample_string, run_no):
         self.sample_id = sample_string
         self.run_no = run_no
-        self.pg_txt.SetLabel(sample_string)
-        self.uc_txt.SetLabel(run_no)
+        self.gui_strings['pg_txt'].SetLabel(sample_string)
+        self.gui_strings['uc_txt'].SetLabel(run_no)
 
     def save_chart_data(self):
         self.all_data = self.chart.get_chart_data()
@@ -903,9 +1029,10 @@ class TrackerPanel(wx.Panel):
 
 
 class TrackerWindow(wx.Frame):
-    def __init__(self, parent, id, title):
+    def __init__(self, parent, id, title, use_extended_gui=False):
         wx.Frame.__init__(self, parent, id, title, size=(1200, 1000))
         self.parent = parent
+        self.use_extended_gui=use_extended_gui
         #New Runs
         self.is_new_run_ongoing = False
         self.data_cache = []
@@ -917,6 +1044,8 @@ class TrackerWindow(wx.Frame):
         # initialize dictionary of tracker panels
         self.track_panels = {}
         #MEMORY LEAK self.all_info = []
+        #Current Tracker Panel
+        self.tracker_panel = None
 
         # Status bar
         self.sb = TrackStatusBar(self)
@@ -1015,6 +1144,11 @@ class TrackerWindow(wx.Frame):
         selstring = ctrl.GetString(ctrl.GetSelection())
         host = blconfig[selstring]['host']
         port = blconfig[selstring]['port']
+        if 'json_input_params' in blconfig[selstring]:
+            with open(blconfig[selstring]['json_input_params'],'r') as file_handle:
+                param_dict = json.loads(file_handle.read())
+                host = param_dict['collector']['ip']
+                port = param_dict['collector']['port']
         self.tb_ctrl_host.GetControl().SetValue(host)
         self.tb_ctrl_port.GetControl().SetValue(port)
 
@@ -1080,7 +1214,9 @@ class TrackerWindow(wx.Frame):
             print("Exception: TrackerWindow: self.tracker_panel.save_chart_data() failed")
             pass
         self.tracker_panel = TrackerPanel(
-            self.track_nb, main_window=self, run_number=run_no, use_resolution=self.use_resolution_threshold
+            self.track_nb, main_window=self, run_number=run_no, 
+            use_resolution=self.use_resolution_threshold,
+            use_extended_gui=self.use_extended_gui
         )
         self.track_panels[run_no] = self.tracker_panel
         self.track_nb.AddPage(self.tracker_panel, panel_title, select=True)
@@ -1113,9 +1249,12 @@ class TrackerWindow(wx.Frame):
 
     def create_collector(self):
         self.ui_timer = wx.Timer(self)
-        self.collector = rcv.Receiver(self)
+        self.collector = rcv.Receiver(self, use_extended_gui=self.use_extended_gui)
         self.Bind(rcv.EVT_SPFDONE, self.onCollectorInfo)
         self.Bind(wx.EVT_TIMER, self.collector.onUITimer, id=self.ui_timer.GetId())
+        #Extended GUI
+        self.Bind(rcv.EVT_PIPELINESTATUS, self.onMonitorStatusInfo)
+        self.Bind(rcv.EVT_PREVIEWIMAGE, self.onPreviewImageInfo)
 
     def start_zmq_collector(self):
         # clear screen / restart runs
@@ -1149,6 +1288,27 @@ class TrackerWindow(wx.Frame):
             sample_label = str(sample_string[:N])+"..."+str(sample_string[-N:])
         return sample_label+"_"+str(run_no_string)
 
+    #Extended GUI
+    def onMonitorStatusInfo(self, e):
+        print("Received Monitor Status Callback!!")
+        monitor_dict = e.GetValue()
+        tab_id = self.getTabString(monitor_dict["sample_id"],monitor_dict["run_no"])
+        if self.track_panels is not None and tab_id in self.track_panels:
+            self.track_panels[tab_id].set_extended_gui_string('fps_txt',monitor_dict['framerate'])
+            self.track_panels[tab_id].set_extended_gui_string('throughput_txt',monitor_dict['avg_frame_throughput_time'])
+            self.track_panels[tab_id].set_extended_gui_string('pipeline_txt',monitor_dict['pipeline_status'])
+            self.track_panels[tab_id].set_extended_gui_string('det_ip_txt',monitor_dict['detector_ip'])
+            self.track_panels[tab_id].set_extended_gui_string('det_label_txt',monitor_dict['detector_label'])
+        else:
+            print("WARNING: Missing tab for Monitor Report, {}".format(tab_id))
+
+    #Extended GUI
+    def onPreviewImageInfo(self, e):
+        print("Received Preview Image Callback!!")
+        #TODO: In this proof-of-concept state, the preview image of active tab will be overwritten.
+        #To keep last preview of any tab, we need to use tab_id like in the monitor status events.
+        if self.tracker_panel is not None:
+            self.tracker_panel.image_chart.reset_chart()
 
     def onCollectorInfo(self, e):
         """ Occurs on every wx.PostEvent instance; updates lists of images with
@@ -1253,12 +1413,16 @@ class TrackerWindow(wx.Frame):
 
 class MainTESTApp(wx.App):
     """ App for the main GUI window  """
+    def __init__(self, use_extended_gui=False):
+        self.use_extended_gui = use_extended_gui
+        wx.App.__init__(self,False)
 
     def OnInit(self):
         from interceptor import __version__ as intxr_version
 
         self.frame = TrackerWindow(
-            None, -1, title="MAXIV DOZOR INTERCEPTOR v.{}" "".format(intxr_version)
+            None, -1, title="MAXIV DOZOR INTERCEPTOR v.{}" "".format(intxr_version),
+            use_extended_gui=self.use_extended_gui
         )
         self.frame.SetMinSize(self.frame.GetEffectiveMinSize())
         self.frame.SetPosition((150, 150))
@@ -1272,5 +1436,5 @@ class MainTESTApp(wx.App):
 
 
 if __name__ == "__main__":
-    app = MainTESTApp(0)
+    app = MainTESTApp(use_extended_gui=True)
     app.MainLoop()

@@ -1,7 +1,7 @@
 from __future__ import absolute_import, division, print_function
 
 """
-Author      : Lyubimov, A.Y.
+Author      : Lyubimov, A.Y., Aleksander Cehovin
 Created     : 03/31/2020
 Last Changed: 03/31/2020
 Description : ZMQ receiver module for Interceptor GUI
@@ -13,10 +13,10 @@ import zmq
 import numpy as np
 import wx
 import copy
+import json
 
-MONITOR_TOPIC_TOKEN = "gui"
-# TODO: Use the config files to switch between ZMQ patterns
-USE_PULL_PUSH = False
+GUI_TOPIC_TOKEN = "gui"
+STATUS_TOPIC_TOKEN = "status"
 
 #Preallocate data dictionaries and avoid dynamic allocations
 #Maybe this is exaggerated, but for now better safe than sorry on
@@ -26,10 +26,11 @@ RESET_SIZE = SIZE_DATA_CACHE - 1000
 
 
 class Receiver(Thread):
-    def __init__(self, parent):
+    def __init__(self, parent, use_extended_gui=False):
         Thread.__init__(self)
         self.parent = parent
         self.stop = False
+        self.use_extended_gui = use_extended_gui
         #List of dictionaries acting as data cache. We preallocate
         #an array of data entries to avoid running this through
         #garbage collection.
@@ -40,6 +41,10 @@ class Receiver(Thread):
         #Bookmark keeps track of what part of the cache is yet to be
         #forwarded to the GUI.        
         self.bookmark = 0
+        #Timestamps to sanitycheck low-frequent reports
+        self.last_monitor_report_time = time.time()
+        self.last_preview_time = time.time()
+
 
         #Pre-allocation of data cache at object creation.
         for i in range(0,SIZE_DATA_CACHE):
@@ -58,15 +63,11 @@ class Receiver(Thread):
         context = zmq.Context()
         url = "tcp://{}:{}".format(host, port)
         print("*** INTERCEPTOR CONNECTED TO {}".format(url))
-        if USE_PULL_PUSH:
-            self.collector = context.socket(zmq.PULL)
-            self.collector.bind("tcp://*:{}".format(port))
-        else:
-            self.collector = context.socket(zmq.SUB)
-            self.collector.connect(url)
-            topic_token = MONITOR_TOPIC_TOKEN
-            self.collector.setsockopt(zmq.SUBSCRIBE,topic_token.encode('utf-8'))
-
+        self.collector = context.socket(zmq.SUB)
+        self.collector.connect(url)
+        self.collector.setsockopt_string(zmq.SUBSCRIBE,GUI_TOPIC_TOKEN)
+        if self.use_extended_gui:
+            self.collector.setsockopt_string(zmq.SUBSCRIBE,STATUS_TOPIC_TOKEN)
 
     def run(self):
         self.read_data()
@@ -80,16 +81,20 @@ class Receiver(Thread):
         while self.stop is False:
             try:
                 data_string = self.collector.recv_string(flags=zmq.NOBLOCK)
-                if not USE_PULL_PUSH:
-                    data_string = data_string[(len(MONITOR_TOPIC_TOKEN)+1):]
+                if data_string[0]=='g':
+                    data_string = data_string[(len(GUI_TOPIC_TOKEN)+1):]
+                elif data_string[0]=='s':
+                    monitor_string = data_string[(len(STATUS_TOPIC_TOKEN)+1):]
+                    self.process_monitor_report(json.loads(monitor_string))
+                    continue
             except Exception as exp:
-                time.sleep(1)
+                time.sleep(0.25)
             else:
                 run_no = data_string.split('run ')[1].split(' frame')[0]
                 frame_idx = data_string.split('frame ')[1].split(' result')[0]
                 result_string = data_string.split('result ')[1].split(' mapping')[0]
                 results = result_string[1:-1].split()
-                sample_string = data_string.split('result ')[1].split(' mapping')[1]
+                sample_string = data_string.split('result ')[1].split(' mapping ')[1]
 
                 data = {
                     "run_no": run_no,
@@ -143,6 +148,24 @@ class Receiver(Thread):
                 self.all_info_cursor = 0
                 self.bookmark = 0
 
+        #GUI Extensions
+        if self.use_extended_gui:
+            self.poll_preview_image()
+
+    def process_monitor_report(self, monitor_dict):
+        evt = MonitorReportDone(tp_EVT_PIPELINE_STATUS, wx.ID_ANY, report=monitor_dict)
+        wx.PostEvent(self.parent, evt)
+
+    # TODO: Proof of concept preview image handler that internally generates data.
+    # Should be replaces by something similar to how the monitor reports are received
+    # from an external stream and implemented in the source simulator.
+    def poll_preview_image(self):
+        timestamp = time.time()
+        if timestamp - self.last_preview_time > 5.0:
+            evt = PreviewImageDone(tp_EVT_PREVIEW_IMAGE, wx.ID_ANY)
+            wx.PostEvent(self.parent, evt)
+            self.last_preview_time = timestamp
+
     def send_to_gui(self, info):
         evt = SpotFinderOneDone(tp_EVT_SPFDONE, -1, info=info)
         wx.PostEvent(self.parent, evt)
@@ -151,8 +174,22 @@ class Receiver(Thread):
         self.stop = True
 
 
+"""
+Event classes below are used to signal events.
+Any available data is transported within the event
+by supplying with typically the last argument of the
+class constructor
+"""
+
+# Spotfinder batch of new data is ready.
 tp_EVT_SPFDONE = wx.NewEventType()
 EVT_SPFDONE = wx.PyEventBinder(tp_EVT_SPFDONE, 1)
+# Lower frequency monitoring data is ready.
+tp_EVT_PIPELINE_STATUS = wx.NewEventType()
+EVT_PIPELINESTATUS = wx.PyEventBinder(tp_EVT_PIPELINE_STATUS, 1)
+# Low frequencey preview image is ready.
+tp_EVT_PREVIEW_IMAGE = wx.NewEventType()
+EVT_PREVIEWIMAGE = wx.PyEventBinder(tp_EVT_PREVIEW_IMAGE, 1)
 
 
 class SpotFinderOneDone(wx.PyCommandEvent):
@@ -164,3 +201,22 @@ class SpotFinderOneDone(wx.PyCommandEvent):
 
     def GetValue(self):
         return self.info
+
+class MonitorReportDone(wx.PyCommandEvent):
+    """ Pipeline report status available  """
+
+    def __init__(self, etype, eid, report=None):
+        wx.PyCommandEvent.__init__(self, etype, eid)
+        self.report = report
+
+    def GetValue(self):
+        return self.report
+
+class PreviewImageDone(wx.PyCommandEvent):
+    """ Preview Image available """
+    def __init__(self, etype, eid, image=None):
+        wx.PyCommandEvent.__init__(self, etype, eid)
+        self.image = image
+
+    def GetValue(self):
+        return self.image
