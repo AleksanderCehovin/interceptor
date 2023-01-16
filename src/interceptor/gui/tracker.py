@@ -1300,7 +1300,7 @@ class TrackerWindow(wx.Frame):
             self.track_panels[tab_id].set_extended_gui_string('det_ip_txt',monitor_dict['detector_ip'])
             self.track_panels[tab_id].set_extended_gui_string('det_label_txt',monitor_dict['detector_label'])
         else:
-            print("ERROR: Missing tab for Monitor Report, {}".format(tab_id))
+            print("WARNING: Missing tab for Monitor Report, {}".format(tab_id))
 
     #Extended GUI
     def onPreviewImageInfo(self, e):

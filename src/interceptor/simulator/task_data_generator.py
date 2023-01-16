@@ -29,10 +29,10 @@ MAX_NO_RUNS=10
 INDEXED_RATE=20
 
 #Port number for stream socket
-PORT=9997
+PORT=5557
 
 # Sleep time between frames. Main parameter for effective FPS.
-SLEEP_S = 0.001
+SLEEP_S = 0.003
 
 # STD OUT PRINT INTERVAL
 PRINT_INT_FRAMES = 500
