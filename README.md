@@ -111,7 +111,7 @@ graph TD;
 
   subgraph "Extended Simple Interceptor GUI"
   GUI;
-  PUB_preview_mockup --> PUB_preview_mockup;
+  SUB_preview_mockup --> SUB_preview_mockup;
   end
 
 
