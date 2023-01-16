@@ -78,6 +78,9 @@ Test data with GUI using resolution for hit rate calculations
 
 ![Simulation with resolutin threshold](doc/images/test_gui_resolution.png)
 
+Test data with the new extended GUI using resolutin for hit rate calculations
+
+![Extended GUI with resolution threshold](doc/images/extended_gui.png)
 
 ## TODO
 
