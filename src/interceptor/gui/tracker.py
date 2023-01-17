@@ -1298,7 +1298,9 @@ class TrackerWindow(wx.Frame):
             self.track_panels[tab_id].set_extended_gui_string('throughput_txt',monitor_dict['avg_frame_throughput_time'])
             self.track_panels[tab_id].set_extended_gui_string('pipeline_txt',monitor_dict['pipeline_status'])
             self.track_panels[tab_id].set_extended_gui_string('det_ip_txt',monitor_dict['detector_ip'])
-            self.track_panels[tab_id].set_extended_gui_string('det_label_txt',monitor_dict['detector_label'])
+            self.track_panels[tab_id].set_extended_gui_string('spotfinder_txt',monitor_dict['spotfinder_algorithm'])
+            self.track_panels[tab_id].set_extended_gui_string('indexer_txt',monitor_dict['indexing_algorithm'])
+            self.track_panels[tab_id].set_extended_gui_string('mask_txt',monitor_dict['active_masking'])
         else:
             print("WARNING: Missing tab for Monitor Report, {}".format(tab_id))
 
