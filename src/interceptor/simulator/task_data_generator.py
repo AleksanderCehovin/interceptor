@@ -71,7 +71,7 @@ def get_status_template():
              'framerate': "0",
              'indexing_algorithm': "None",
              'avg_frame_throughput_time': "N/A",
-             'active_masking': "None",
+             'active_masking': "NO MASK",
              'run_no': "1",
              'sample_id': "None"}
 

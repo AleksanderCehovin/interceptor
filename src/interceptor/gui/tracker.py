@@ -1301,6 +1301,7 @@ class TrackerWindow(wx.Frame):
             self.track_panels[tab_id].set_extended_gui_string('spotfinder_txt',monitor_dict['spotfinder_algorithm'])
             self.track_panels[tab_id].set_extended_gui_string('indexer_txt',monitor_dict['indexing_algorithm'])
             self.track_panels[tab_id].set_extended_gui_string('mask_txt',monitor_dict['active_masking'])
+            self.track_panels[tab_id].set_extended_gui_string('det_label_txt',monitor_dict['detector_label'])
         else:
             print("WARNING: Missing tab for Monitor Report, {}".format(tab_id))
 
