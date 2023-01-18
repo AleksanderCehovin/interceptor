@@ -1407,11 +1407,11 @@ class TrackerWindow(wx.Frame):
         # TODO: CLEANUP ON EXIT!
         self.stop_run()
 
-
     def onStop(self, e):
         print("Clear Button Event!!")
         #Debug button removes all but the active tab.
         self.reset_tabs()
+
 
 class MainTESTApp(wx.App):
     """ App for the main GUI window  """
