@@ -17,8 +17,8 @@ that can be used to feed the GUI with fake test data for standalone evaluation a
 Some notes on the code:
 
 - GUI modified for Dozor spotfinding metrics (number of spots, quality, and resolution)
-- The update frequency of the graphics is intentionally set at 1 Hz (configurable). From what I 
-undertand the ZMQ data collection loop is done in a separate thread as the GUI, but they still work within 
+- The update frequency of the graphics is intentionally set at 1 Hz (configurable). From what I
+understand the ZMQ data collection loop is done in a separate thread as the GUI, but they still work within 
 the limitation of the Python GIL (I'm guessing). It is therefore important to avoid starving the execution 
 with excessive GUI updates. TODO list below discusses solutions to this issue.
 - If a run tab collects large amount of points, the plot will only show the last 25k points in a moving 
@@ -161,6 +161,9 @@ Test data with the new extended GUI using resolutin for hit rate calculations
   on the pipeline side is the best solution. Doing it on the GUI side will implement logic
   more easily implemented upstream. 
 - When actively resizing window with mouse drag, the tab switching between runs does not work properly.
-- Refactor the setup of all the GUI strings.
-- Add support for preview images in the extended GUI in the simulator.
-- Use a proper test screen image for when preview images are not available?
+- Add support for preview images in the extended GUI from the simulator.
+- The preview image contrast threshold does not work, and is there only for illustration.
+- Use a proper test screen image for when preview images are not available? People get confused by preview image redraws. On the other hand they illustrate the simulated events that trigger a redraw.
+- There is still legacy directories and other files laying around. At this point this repository is a pure decoupled GUI component, so other content is only confusing.
+- It should not be so hard to move to batched and compressed data transferred, which only really need to happen
+  at around 1 Hz. This should make the GUI easily handle 1-10kHz data rates.
